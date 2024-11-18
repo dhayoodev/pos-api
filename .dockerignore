@@ -1,0 +1,10 @@
+/node_modules
+/vendor
+.git
+.idea
+.env
+.env.example
+.dockerignore
+Dockerfile
+docker-compose.yml
+*.log 
