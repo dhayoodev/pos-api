@@ -19,11 +19,13 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'role' => 0,
         ]);
         $customer = User::factory()->create([
             'name' => 'Customer User',
             'email' => 'customer@example.com',
             'password' => Hash::make('password'),
+            'role' => 1,
         ]);
 
         // Create product categories

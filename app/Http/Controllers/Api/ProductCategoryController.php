@@ -11,20 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * @OA\Info(
- *     version="1.0.0",
- *     title="Point of Sale API",
- *     description="API Documentation for Point of Sale Application",
- *     @OA\Contact(
- *         email="admin@example.com"
- *     )
- * )
- * 
- * @OA\Server(
- *     url="http://localhost:8000",
- *     description="Local API Server"
- * )
- * 
  * @OA\Tag(
  *     name="Product Categories",
  *     description="API Endpoints for managing product categories"

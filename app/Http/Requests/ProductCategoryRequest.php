@@ -4,6 +4,13 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * @OA\Schema(
+ *     schema="ProductCategoryRequest",
+ *     required={"category_name"},
+ *     @OA\Property(property="category_name", type="string", maxLength=255)
+ * )
+ */
 class ProductCategoryRequest extends FormRequest
 {
     public function authorize(): bool
@@ -24,4 +31,4 @@ class ProductCategoryRequest extends FormRequest
             ]
         ];
     }
-} 
+}

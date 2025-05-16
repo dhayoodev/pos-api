@@ -8,6 +8,34 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @OA\Info(
+ *     version="1.0.0",
+ *     title="Point of Sale API",
+ *     description="API Documentation for Point of Sale Application",
+ *     @OA\Contact(
+ *         email="admin@example.com"
+ *     )
+ * )
+ * 
+ * @OA\Server(
+ *     url="http://localhost:8000",
+ *     description="Local API Server"
+ * )
+ * 
+ * @OA\SecurityScheme(
+ *     type="apiKey",
+ *     in="header",
+ *     name="Authorization",
+ *     securityScheme="sanctum",
+ *     description="Enter token in format (Bearer <token>)"
+ * )
+ * 
+ * @OA\Tag(
+ *     name="Login",
+ *     description="API Endpoints for login"
+ * )
+ */
 class AuthController extends Controller
 {
     /**

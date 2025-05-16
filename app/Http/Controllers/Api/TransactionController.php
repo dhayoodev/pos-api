@@ -49,20 +49,7 @@ class TransactionController extends Controller
      *     tags={"Transactions"},
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(
-     *             required={"user_id", "date", "payment_status", "details"},
-     *             @OA\Property(property="user_id", type="integer", example=1),
-     *             @OA\Property(property="date", type="string", format="date", example="2024-01-01"),
-     *             @OA\Property(property="payment_status", type="string", enum={"pending", "paid", "failed", "refunded"}, example="paid"),
-     *             @OA\Property(
-     *                 property="details",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     @OA\Property(property="product_id", type="integer", example=1),
-     *                     @OA\Property(property="qty", type="integer", example=2)
-     *                 )
-     *             )
-     *         )
+     *         @OA\JsonContent(ref="#/components/schemas/TransactionRequest")
      *     ),
      *     @OA\Response(
      *         response=201,

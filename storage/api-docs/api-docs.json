@@ -466,50 +466,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "user_id",
-                                    "date",
-                                    "payment_status",
-                                    "details"
-                                ],
-                                "properties": {
-                                    "user_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "date": {
-                                        "type": "string",
-                                        "format": "date",
-                                        "example": "2024-01-01"
-                                    },
-                                    "payment_status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "pending",
-                                            "paid",
-                                            "failed",
-                                            "refunded"
-                                        ],
-                                        "example": "paid"
-                                    },
-                                    "details": {
-                                        "type": "array",
-                                        "items": {
-                                            "properties": {
-                                                "product_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "qty": {
-                                                    "type": "integer",
-                                                    "example": 2
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/TransactionRequest"
                             }
                         }
                     }
@@ -606,235 +563,180 @@
                     }
                 ]
             }
+        },
+        "/api/v1/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List all users",
+                "operationId": "b343fe695d1beaa03b7deb8449dd1b7c",
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create a new user",
+                "operationId": "71d86dd873f9e567415d5da5929a0dea",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get a specific user",
+                "operationId": "0197efcfd303b59ccdaad3e01097a0e0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update a user",
+                "operationId": "e27513375b71e3b3dcc043da6f62129c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
         "schemas": {
-            "Product": {
-                "title": "Product",
-                "description": "Product model",
-                "properties": {
-                    "product_id": {
-                        "title": "ID",
-                        "description": "Product ID",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "category": {
-                        "$ref": "#/components/schemas/ProductCategory"
-                    },
-                    "product_name": {
-                        "title": "Product Name",
-                        "description": "Name of the product",
-                        "example": "iPhone 15 Pro"
-                    },
-                    "picture": {
-                        "title": "Picture",
-                        "description": "Product image URL",
-                        "example": "products/iphone15pro.jpg"
-                    },
-                    "stock": {
-                        "title": "Stock",
-                        "description": "Available stock",
-                        "format": "int32",
-                        "example": 50
-                    },
-                    "price": {
-                        "title": "Price",
-                        "description": "Product price",
-                        "format": "float",
-                        "example": 999.99
-                    },
-                    "desc_product": {
-                        "title": "Description",
-                        "description": "Product description",
-                        "example": "Latest iPhone with advanced features"
-                    },
-                    "discount_type": {
-                        "title": "Discount Type",
-                        "description": "Type of discount (percentage or fixed)",
-                        "enum": [
-                            "percentage",
-                            "fixed"
-                        ],
-                        "example": "percentage"
-                    },
-                    "discount_amount": {
-                        "title": "Discount Amount",
-                        "description": "Amount of discount",
-                        "format": "float",
-                        "example": 10
-                    },
-                    "start_date_disc": {
-                        "title": "Discount Start Date",
-                        "description": "Start date of discount",
-                        "format": "datetime",
-                        "example": "2024-01-01T00:00:00.000000Z"
-                    },
-                    "end_date_disc": {
-                        "title": "Discount End Date",
-                        "description": "End date of discount",
-                        "format": "datetime",
-                        "example": "2024-02-01T00:00:00.000000Z"
-                    },
-                    "created_date": {
-                        "title": "Created Date",
-                        "description": "Created at",
-                        "format": "datetime",
-                        "example": "2024-01-01T00:00:00.000000Z"
-                    },
-                    "created_by": {
-                        "title": "Created By",
-                        "description": "User who created the product",
-                        "example": "Admin User"
-                    }
-                },
-                "type": "object",
-                "xml": {
-                    "name": "Product"
-                }
-            },
-            "ProductCategory": {
-                "title": "ProductCategory",
-                "description": "Product Category model",
-                "properties": {
-                    "product_category_id": {
-                        "title": "ID",
-                        "description": "Product Category ID",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "category_name": {
-                        "title": "Category Name",
-                        "description": "Name of the category",
-                        "example": "Electronics"
-                    },
-                    "created_at": {
-                        "title": "Created at",
-                        "description": "Created at",
-                        "format": "datetime",
-                        "example": "2024-01-01T00:00:00.000000Z"
-                    },
-                    "updated_at": {
-                        "title": "Updated at",
-                        "description": "Updated at",
-                        "format": "datetime",
-                        "example": "2024-01-01T00:00:00.000000Z"
-                    }
-                },
-                "type": "object",
-                "xml": {
-                    "name": "ProductCategory"
-                }
-            },
-            "Transaction": {
-                "title": "Transaction",
-                "description": "Transaction model",
-                "properties": {
-                    "trans_id": {
-                        "title": "ID",
-                        "description": "Transaction ID",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "user_id": {
-                        "title": "User ID",
-                        "description": "ID of user who made the transaction",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "date": {
-                        "title": "Date",
-                        "description": "Transaction date",
-                        "format": "date",
-                        "example": "2024-01-01"
-                    },
-                    "total_price": {
-                        "title": "Total Price",
-                        "description": "Total transaction price",
-                        "format": "float",
-                        "example": 1499.99
-                    },
-                    "payment_status": {
-                        "title": "Payment Status",
-                        "description": "Status of payment",
-                        "enum": [
-                            "pending",
-                            "paid",
-                            "failed",
-                            "refunded"
-                        ],
-                        "example": "paid"
-                    },
-                    "details": {
-                        "title": "Details",
-                        "description": "Transaction details",
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/TransactionDetail"
-                        }
-                    }
-                },
-                "type": "object",
-                "xml": {
-                    "name": "Transaction"
-                }
-            },
-            "TransactionDetail": {
-                "title": "TransactionDetail",
-                "description": "Transaction Detail model",
-                "properties": {
-                    "trans_detail_id": {
-                        "title": "ID",
-                        "description": "Transaction Detail ID",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "product": {
-                        "$ref": "#/components/schemas/Product"
-                    },
-                    "qty": {
-                        "title": "Quantity",
-                        "description": "Product quantity",
-                        "format": "int32",
-                        "example": 2
-                    },
-                    "price": {
-                        "title": "Price",
-                        "description": "Product price at time of purchase",
-                        "format": "float",
-                        "example": 999.99
-                    },
-                    "subtotal": {
-                        "title": "Subtotal",
-                        "description": "Subtotal for this item",
-                        "format": "float",
-                        "example": 1999.98
-                    }
-                },
-                "type": "object",
-                "xml": {
-                    "name": "TransactionDetail"
-                }
-            },
             "ProductCategoryRequest": {
-                "title": "Product Category Request",
-                "description": "Product Category request body data",
                 "required": [
                     "category_name"
                 ],
                 "properties": {
                     "category_name": {
-                        "title": "category_name",
-                        "description": "Name of the category",
-                        "example": "Electronics"
+                        "type": "string",
+                        "maxLength": 255
                     }
                 },
                 "type": "object"
             },
             "ProductRequest": {
-                "title": "Product Request",
-                "description": "Product request body data",
                 "required": [
                     "product_category_id",
                     "product_name",
@@ -843,64 +745,429 @@
                 ],
                 "properties": {
                     "product_category_id": {
-                        "title": "Product Category ID",
-                        "description": "ID of product category",
-                        "format": "int64",
-                        "example": 1
+                        "type": "integer",
+                        "format": "int64"
                     },
                     "product_name": {
-                        "title": "Product Name",
-                        "description": "Name of the product",
-                        "example": "iPhone 15 Pro"
+                        "type": "string",
+                        "maxLength": 255
                     },
                     "picture": {
-                        "title": "Picture",
-                        "description": "Product image URL",
-                        "example": "products/iphone15pro.jpg"
+                        "type": "string",
+                        "nullable": true
                     },
                     "stock": {
-                        "title": "Stock",
-                        "description": "Available stock",
-                        "format": "int32",
-                        "example": 50
+                        "type": "integer",
+                        "minimum": 0
                     },
                     "price": {
-                        "title": "Price",
-                        "description": "Product price",
+                        "type": "number",
                         "format": "float",
-                        "example": 999.99
+                        "minimum": 0
                     },
                     "desc_product": {
-                        "title": "Description",
-                        "description": "Product description",
-                        "example": "Latest iPhone with advanced features"
+                        "type": "string",
+                        "nullable": true
                     },
                     "discount_type": {
-                        "title": "Discount Type",
-                        "description": "Type of discount",
+                        "type": "string",
                         "enum": [
                             "percentage",
                             "fixed"
                         ],
-                        "example": "percentage"
+                        "nullable": true
                     },
                     "discount_amount": {
-                        "title": "Discount Amount",
-                        "description": "Amount of discount",
+                        "type": "number",
                         "format": "float",
-                        "example": 10
+                        "minimum": 0,
+                        "nullable": true
                     },
                     "start_date_disc": {
-                        "title": "Discount Start Date",
-                        "description": "Start date of discount",
-                        "format": "datetime",
-                        "example": "2024-01-01T00:00:00.000000Z"
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "end_date_disc": {
-                        "title": "Discount End Date",
-                        "description": "End date of discount",
-                        "format": "datetime",
-                        "example": "2024-02-01T00:00:00.000000Z"
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "TransactionRequest": {
+                "required": [
+                    "user_id",
+                    "date",
+                    "payment_status",
+                    "details"
+                ],
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ]
+                    },
+                    "details": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "product_id",
+                                "qty"
+                            ],
+                            "properties": {
+                                "product_id": {
+                                    "type": "integer",
+                                    "format": "int64"
+                                },
+                                "qty": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "type": "object"
+            },
+            "UserRequest": {
+                "required": [
+                    "name",
+                    "email",
+                    "role"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "admin",
+                            "cashier"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "Product": {
+                "required": [
+                    "product_category_id",
+                    "product_name",
+                    "stock",
+                    "price"
+                ],
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "product_category_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "product_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "picture": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "stock": {
+                        "type": "integer"
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "desc_product": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "discount_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "discount_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "start_date_disc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "end_date_disc": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "updated_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "deleted_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "created_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ProductCategory": {
+                "required": [
+                    "category_name"
+                ],
+                "properties": {
+                    "product_category_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "category_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                },
+                "type": "object"
+            },
+            "Transaction": {
+                "required": [
+                    "user_id",
+                    "date",
+                    "total_price",
+                    "payment_status"
+                ],
+                "properties": {
+                    "trans_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "total_price": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "payment_status": {
+                        "type": "string"
+                    },
+                    "is_hide": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "note_hide": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_deleted": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "note_deleted": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "updated_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "deleted_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "created_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "TransactionDetail": {
+                "required": [
+                    "trans_id",
+                    "product_id",
+                    "qty",
+                    "price",
+                    "subtotal"
+                ],
+                "properties": {
+                    "trans_detail_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "trans_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "product_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "qty": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "subtotal": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "is_hide": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "note_hide": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_deleted": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "note_deleted": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "updated_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "deleted_by": {
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "created_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "deleted_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "required": [
+                    "name",
+                    "email",
+                    "role"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "admin",
+                            "cashier"
+                        ]
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -927,6 +1194,10 @@
         {
             "name": "Transactions",
             "description": "API Endpoints for managing transactions"
+        },
+        {
+            "name": "Users",
+            "description": "API Endpoints for managing users"
         },
         {
             "name": "Authentication",
