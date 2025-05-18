@@ -48,6 +48,7 @@ class ProductCategoryController extends Controller
      *     path="/api/v1/product-categories",
      *     summary="Create a new product category",
      *     tags={"Product Categories"},
+     *     security={{"sanctum": {}}}
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/ProductCategoryRequest")
@@ -74,6 +75,7 @@ class ProductCategoryController extends Controller
      *     path="/api/v1/product-categories/{id}",
      *     summary="Get a specific product category",
      *     tags={"Product Categories"},
+     *     security={{"sanctum": {}}}
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -102,6 +104,7 @@ class ProductCategoryController extends Controller
      *     path="/api/v1/product-categories/{id}",
      *     summary="Update a product category",
      *     tags={"Product Categories"},
+     *     security={{"sanctum": {}}}
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -139,6 +142,7 @@ class ProductCategoryController extends Controller
      *     path="/api/v1/product-categories/{id}",
      *     summary="Delete a product category",
      *     tags={"Product Categories"},
+     *     security={{"sanctum": {}}}
      *     @OA\Parameter(
      *         name="id",
      *         in="path",

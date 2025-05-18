@@ -20,14 +20,30 @@ class UserController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/users",
-     *     summary="List all users",
+     *     summary="List all users with pagination",
      *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="List of users",
+     *         description="Paginated list of users",
      *         @OA\JsonContent(
-     *             type="array",
-     *             @OA\Items(ref="#/components/schemas/User")
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/User")),
+     *             @OA\Property(property="links", type="object"),
+     *             @OA\Property(property="meta", type="object")
      *         )
      *     ),
      *     security={{"sanctum": {}}}
@@ -35,7 +51,8 @@ class UserController extends Controller
      */
     public function index()
     {
-        return UserResource::collection(User::all());
+        $perPage = request('per_page', 15);
+        return UserResource::collection(User::active()->paginate($perPage));
     }
 
     /**
@@ -99,7 +116,7 @@ class UserController extends Controller
     }
 
     /**
-     * @OA\Put(
+     * @OA\PATCH(
      *     path="/api/v1/users/{id}",
      *     summary="Update a user",
      *     tags={"Users"},
@@ -134,12 +151,45 @@ class UserController extends Controller
     {
         $data = $request->validated();
         
-        if (isset($data['password'])) {
+        if (isset($data['password']) && !empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
         }
         
         $user->update($data);
-
         return new UserResource($user);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/users/{id}",
+     *     summary="Delete a user",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="User ID",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="User deleted successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found"
+     *     ),
+     *     security={{"sanctum": {}}}
+     * )
+     */
+    public function destroy(User $user): UserResource
+    {
+        $user->update(['status' => 1]);
+        return new UserResource($user);
+
+        /* $user->delete();
+        return response()->json([], 204); */
     }
 }

@@ -569,18 +569,51 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "List all users",
+                "summary": "List all users with pagination",
                 "operationId": "b343fe695d1beaa03b7deb8449dd1b7c",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of users",
+                        "description": "Paginated list of users",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/User"
-                                    }
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/User"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -669,12 +702,43 @@
                     }
                 ]
             },
-            "put": {
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete a user",
+                "operationId": "ae967f8cf847f7d2ad9eba19833f58cd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User deleted successfully"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Update a user",
-                "operationId": "e27513375b71e3b3dcc043da6f62129c",
+                "operationId": "432cc6503f694e50b16c417a4259efa3",
                 "parameters": [
                     {
                         "name": "id",
@@ -861,17 +925,18 @@
                         "format": "email",
                         "maxLength": 255
                     },
+                    "phone": {
+                        "type": "string",
+                        "minLength": 8
+                    },
                     "password": {
                         "type": "string",
                         "minLength": 8,
                         "nullable": true
                     },
                     "role": {
-                        "type": "string",
-                        "enum": [
-                            "admin",
-                            "cashier"
-                        ]
+                        "type": "integer",
+                        "minimum": 0
                     }
                 },
                 "type": "object"
@@ -1149,12 +1214,18 @@
                         "format": "email",
                         "maxLength": 255
                     },
-                    "role": {
+                    "phone": {
                         "type": "string",
-                        "enum": [
-                            "admin",
-                            "cashier"
-                        ]
+                        "maxLength": 255
+                    },
+                    "role": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "status": {
+                        "description": "0 = active, 1 = deleted",
+                        "type": "integer",
+                        "minimum": 0
                     },
                     "email_verified_at": {
                         "type": "string",
