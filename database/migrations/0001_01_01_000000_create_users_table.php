@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->tinyInteger('role')->default(0);
-            $table->tinyInteger('status')->default(0);
+            $table->tinyInteger('role')->default(0)->comment('0: admin, 1: cashier');
+            $table->tinyInteger('status')->default(0)->comment('0: active, 1: deleted');
             $table->rememberToken();
             $table->timestamps();
         });

@@ -129,7 +129,12 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/v1/product-categories/{id}": {
@@ -164,7 +169,12 @@
                     "404": {
                         "description": "Category not found"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
@@ -210,7 +220,12 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -236,7 +251,12 @@
                     "404": {
                         "description": "Category not found"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/v1/products": {
@@ -418,6 +438,409 @@
                     },
                     "404": {
                         "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shifts": {
+            "get": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "List all shifts with pagination",
+                "operationId": "fc5018793f7f7a1161f3b145f61312f7",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of shifts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Shift"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "Create a new shift",
+                "operationId": "558637e773083c8fb43b7a764cea63b0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShiftRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Shift created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Shift"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shifts/user/{user_id}": {
+            "get": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "Get shifts by user ID",
+                "operationId": "a8367dba1de3f2d6e46a00e0420d3201",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "description": "ID of the user",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Shift"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shifts/{shift}": {
+            "get": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "Get shift details",
+                "operationId": "04c7a5d80b59cf162741ef606f19ec13",
+                "parameters": [
+                    {
+                        "name": "shift",
+                        "in": "path",
+                        "description": "ID of the shift",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Shift"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Shift not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "Update shift details",
+                "operationId": "4604c54fc854e15cf7264efeaf5efa4d",
+                "parameters": [
+                    {
+                        "name": "shift",
+                        "in": "path",
+                        "description": "ID of the shift",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShiftRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Shift updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Shift"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Shift not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shifts/{shift}/histories": {
+            "post": {
+                "tags": [
+                    "Shifts"
+                ],
+                "summary": "Add shift history",
+                "operationId": "0cfd28ab2c2b263f5f423b23224c6fbd",
+                "parameters": [
+                    {
+                        "name": "shift",
+                        "in": "path",
+                        "description": "ID of the shift",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ShiftHistoryRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "History added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShiftHistory"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Shift not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shift-histories": {
+            "get": {
+                "tags": [
+                    "Shift Histories"
+                ],
+                "summary": "Get all shift histories",
+                "operationId": "d338572f71ac04f2c73fd63e746723b1",
+                "parameters": [
+                    {
+                        "name": "shift_id",
+                        "in": "query",
+                        "description": "Filter by shift ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Filter by type (0: income, 1: outcome)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ShiftHistory"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/shift-histories/{history}": {
+            "get": {
+                "tags": [
+                    "Shift Histories"
+                ],
+                "summary": "Get a specific shift history",
+                "operationId": "e39f5ad904c857cab7ed13edcbc39427",
+                "parameters": [
+                    {
+                        "name": "history",
+                        "in": "path",
+                        "description": "Shift History ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShiftHistory"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Shift history not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
                     }
                 },
                 "security": [
@@ -860,6 +1283,65 @@
                 },
                 "type": "object"
             },
+            "ShiftHistoryRequest": {
+                "required": [
+                    "description",
+                    "type",
+                    "amount"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "example": "Cash deposit"
+                    },
+                    "type": {
+                        "description": "0: income, 1: outcome",
+                        "type": "integer",
+                        "minimum": 0,
+                        "enum": [
+                            0,
+                            1
+                        ],
+                        "example": 0
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "minimum": 0,
+                        "example": "100.00"
+                    }
+                },
+                "type": "object"
+            },
+            "ShiftRequest": {
+                "required": [
+                    "user_id",
+                    "cash_balance"
+                ],
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cash_balance": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": "100.00"
+                    },
+                    "expected_cash_balance": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": "100.00"
+                    },
+                    "final_cash_balance": {
+                        "type": "number",
+                        "format": "decimal",
+                        "example": "100.00"
+                    }
+                },
+                "type": "object"
+            },
             "TransactionRequest": {
                 "required": [
                     "user_id",
@@ -1032,6 +1514,124 @@
                     "category_name": {
                         "type": "string",
                         "maxLength": 255
+                    }
+                },
+                "type": "object"
+            },
+            "Shift": {
+                "required": [
+                    "user_id",
+                    "cash_balance",
+                    "created_at",
+                    "created_by"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "cash_balance": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "expected_cash_balance": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "final_cash_balance": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "creator": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "updater": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "nullable": true,
+                        "type": "object"
+                    },
+                    "histories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ShiftHistory"
+                        },
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ShiftHistory": {
+                "required": [
+                    "shift_id",
+                    "description",
+                    "type",
+                    "amount",
+                    "created_at",
+                    "created_by"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "shift_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "0: pay-in, 1: pay-out",
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1
+                        ]
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "decimal"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "integer"
+                    },
+                    "shift": {
+                        "$ref": "#/components/schemas/Shift"
+                    },
+                    "creator": {
+                        "$ref": "#/components/schemas/User"
                     }
                 },
                 "type": "object"
@@ -1261,6 +1861,14 @@
         {
             "name": "Products",
             "description": "API Endpoints for managing products"
+        },
+        {
+            "name": "Shifts",
+            "description": "API Endpoints for managing shifts"
+        },
+        {
+            "name": "Shift Histories",
+            "description": "API Endpoints for managing shift histories / cash management"
         },
         {
             "name": "Transactions",

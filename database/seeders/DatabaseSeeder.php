@@ -96,7 +96,7 @@ class DatabaseSeeder extends Seeder
 
         // Assuming we already have users and products from previous seeders
         $admin = User::where('email', 'admin@example.com')->first();
-        $customer = User::where('email', 'customer@example.com')->first();
+        $customer = User::where('email', 'cashier@example.com')->first();
         
         // Create sample transactions
         $transaction1 = Transaction::create([
