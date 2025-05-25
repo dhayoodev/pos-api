@@ -7,17 +7,18 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *     schema="ProductRequest",
- *     required={"product_category_id", "product_name", "stock", "price"},
- *     @OA\Property(property="product_category_id", type="integer", format="int64"),
- *     @OA\Property(property="product_name", type="string", maxLength=255),
- *     @OA\Property(property="picture", type="string", nullable=true),
- *     @OA\Property(property="stock", type="integer", minimum=0),
+ *     required={"name", "price", "status"},
+ *     @OA\Property(property="name", type="string", maxLength=255),
+ *     @OA\Property(
+ *         property="image",
+ *         type="string",
+ *         format="binary",
+ *         nullable=true,
+ *         description="Product image file (jpeg, png, jpg, gif up to 2MB)"
+ *     ),
+ *     @OA\Property(property="description", type="string", nullable=true),
  *     @OA\Property(property="price", type="number", format="float", minimum=0),
- *     @OA\Property(property="desc_product", type="string", nullable=true),
- *     @OA\Property(property="discount_type", type="string", enum={"percentage", "fixed"}, nullable=true),
- *     @OA\Property(property="discount_amount", type="number", format="float", minimum=0, nullable=true),
- *     @OA\Property(property="start_date_disc", type="string", format="date-time", nullable=true),
- *     @OA\Property(property="end_date_disc", type="string", format="date-time", nullable=true)
+ *     @OA\Property(property="status", type="integer", enum={"0", "1", "2"}, description="0: active, 1: disabled, 2: deleted")
  * )
  */
 class ProductRequest extends FormRequest
@@ -30,16 +31,24 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_category_id' => ['required', 'exists:product_categories,product_category_id'],
-            'product_name' => ['required', 'string', 'max:255'],
-            'picture' => ['nullable', 'string', 'max:255'],
-            'stock' => ['required', 'integer', 'min:0'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'desc_product' => ['nullable', 'string'],
-            'discount_type' => ['nullable', 'in:percentage,fixed'],
-            'discount_amount' => ['nullable', 'numeric', 'min:0'],
-            'start_date_disc' => ['nullable', 'date'],
-            'end_date_disc' => ['nullable', 'date', 'after_or_equal:start_date_disc'],
+            'name' => ['string', 'max:255'],
+            'image' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'description' => ['nullable', 'string'],
+            'price' => ['numeric', 'min:0'],
+            'status' => ['in:0,1,2']
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Product name is required',
+            'name.max' => 'Product name cannot exceed 255 characters',
+            'price.required' => 'Product price is required',
+            'price.numeric' => 'Product price must be a number',
+            'price.min' => 'Product price cannot be negative',
+            'status.required' => 'Product status is required',
+            'status.in' => 'Invalid product status'
         ];
     }
 }

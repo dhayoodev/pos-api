@@ -56,6 +56,44 @@ class UserController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/users/role/{role}",
+     *     summary="Get all users by role without pagination",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="role",
+     *         in="path",
+     *         required=true,
+     *         description="Filter users by role",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of users",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(ref="#/components/schemas/User")
+     *             )
+     *         )
+     *     ),
+     *     security={{"sanctum": {}}}
+     * )
+     */
+    public function getByRole(int $role)
+    {
+        $query = User::active();
+
+        if ($role) {
+            $query->where('role', $role);
+        }
+
+        return UserResource::collection($query->get());
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/v1/users",
      *     summary="Create a new user",

@@ -15,6 +15,231 @@
         }
     ],
     "paths": {
+        "/api/v1/adjustment-products/upload-image": {
+            "post": {
+                "tags": [
+                    "Adjustment Products"
+                ],
+                "summary": "Upload image for an adjustment product",
+                "operationId": "a2f41245f18109bd9e12a99656f4b880",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "image": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Image uploaded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdjustmentProduct"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Adjustment product not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/adjustment-products": {
+            "get": {
+                "tags": [
+                    "Adjustment Products"
+                ],
+                "summary": "List all adjustment products with optional filters and pagination",
+                "operationId": "5998df2dc10eef3392ed20cbfe9126a8",
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "query",
+                        "description": "Filter by product ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter by user ID (branch)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "stock_id",
+                        "in": "query",
+                        "description": "Filter by stock ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Filter by adjustment type (0: plus, 1: minus)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of adjustment products",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdjustmentProduct"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Adjustment Products"
+                ],
+                "summary": "Create a new adjustment product",
+                "operationId": "9f85b9d4344845b1c8584d0ce16551fa",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdjustmentProduct"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Adjustment product created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdjustmentProduct"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/adjustment-products/{id}": {
+            "get": {
+                "tags": [
+                    "Adjustment Products"
+                ],
+                "summary": "Get a specific adjustment product",
+                "operationId": "82633d8c811e296cbf1760670f0accdd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Adjustment product details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdjustmentProduct"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Adjustment product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/login": {
             "post": {
                 "tags": [
@@ -66,6 +291,45 @@
                         "description": "Invalid credentials"
                     }
                 }
+            }
+        },
+        "/api/v1/files/{path}": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Get file by path",
+                "operationId": "5efcf778180a3766167bc6c5d1c55403",
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "description": "File path relative to storage",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File stream",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "File not found"
+                    }
+                },
+                "security": [
+                    {}
+                ]
             }
         },
         "/api/v1/product-categories": {
@@ -264,18 +528,92 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "List all products",
+                "summary": "List all products with pagination",
                 "operationId": "072fd15d3be55577bb08c19d19f1e75c",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status (0: active, 1: disabled, 2: deleted)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter stock quantity by user/branch ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by product name",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of products",
+                        "description": "Paginated list of products",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Product"
-                                    }
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "allOf": [
+                                                    {
+                                                        "$ref": "#/components/schemas/Product"
+                                                    },
+                                                    {
+                                                        "properties": {
+                                                            "total_stock": {
+                                                                "description": "Total stock quantity across all branches",
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -296,7 +634,7 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/ProductRequest"
                             }
@@ -364,12 +702,12 @@
                     }
                 ]
             },
-            "put": {
+            "post": {
                 "tags": [
                     "Products"
                 ],
                 "summary": "Update a product",
-                "operationId": "d3addbe72313169741e652404694ef9d",
+                "operationId": "cbb0f54bb4c6f617c9dc73c9f1517dea",
                 "parameters": [
                     {
                         "name": "id",
@@ -384,7 +722,7 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/ProductRequest"
                             }
@@ -850,6 +1188,211 @@
                 ]
             }
         },
+        "/api/v1/stock-products": {
+            "get": {
+                "tags": [
+                    "Stock Products"
+                ],
+                "summary": "List all stock products with optional filters",
+                "operationId": "77a7ccc791351c74c4b50d7c3930f587",
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "query",
+                        "description": "Filter by product ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter by user ID (branch)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of stock products",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/StockProduct"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Stock Products"
+                ],
+                "summary": "Create a new stock product",
+                "operationId": "8354a16278b4ff8339fe3972031ca4d1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockProductRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Stock product created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockProduct"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/stock-products/{id}": {
+            "get": {
+                "tags": [
+                    "Stock Products"
+                ],
+                "summary": "Get a specific stock product",
+                "operationId": "8220b33705e086dcc54c95b79adb99ad",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stock product details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockProduct"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Stock product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Stock Products"
+                ],
+                "summary": "Update a stock product",
+                "operationId": "ba9953a8d917c0f9202e27a18623cc11",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockProduct"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Stock product updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockProduct"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Stock product not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Stock Products"
+                ],
+                "summary": "Delete a stock product",
+                "operationId": "feccc6de5f7e60bfe49b6b1327ce8af5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Stock product deleted successfully"
+                    },
+                    "404": {
+                        "description": "Stock product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/transactions": {
             "get": {
                 "tags": [
@@ -1086,6 +1629,51 @@
                 ]
             }
         },
+        "/api/v1/users/role/{role}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get all users by role without pagination",
+                "operationId": "77fb79b61e71e49257ed97645be7f0cd",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "path",
+                        "description": "Filter users by role",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/User"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/users/{id}": {
             "get": {
                 "tags": [
@@ -1211,6 +1799,65 @@
     },
     "components": {
         "schemas": {
+            "AdjustmentProductImageRequest": {
+                "required": [
+                    "image"
+                ],
+                "properties": {
+                    "image": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AdjustmentProductRequest": {
+                "required": [
+                    "product_id",
+                    "user_id",
+                    "stock_id",
+                    "type",
+                    "quantity"
+                ],
+                "properties": {
+                    "product_id": {
+                        "description": "Product ID must exist in products table",
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "description": "User ID must exist in users table",
+                        "type": "integer"
+                    },
+                    "stock_id": {
+                        "description": "Stock ID must exist in stock_products table",
+                        "type": "integer"
+                    },
+                    "type": {
+                        "description": "0: minus, 1: plus",
+                        "type": "integer",
+                        "enum": [
+                            "0",
+                            "1"
+                        ]
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "image": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "ProductCategoryRequest": {
                 "required": [
                     "category_name"
@@ -1225,60 +1872,38 @@
             },
             "ProductRequest": {
                 "required": [
-                    "product_category_id",
-                    "product_name",
-                    "stock",
-                    "price"
+                    "name",
+                    "price",
+                    "status"
                 ],
                 "properties": {
-                    "product_category_id": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "product_name": {
+                    "name": {
                         "type": "string",
                         "maxLength": 255
                     },
-                    "picture": {
+                    "image": {
+                        "description": "Product image file (jpeg, png, jpg, gif up to 2MB)",
                         "type": "string",
+                        "format": "binary",
                         "nullable": true
                     },
-                    "stock": {
-                        "type": "integer",
-                        "minimum": 0
+                    "description": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "price": {
                         "type": "number",
                         "format": "float",
                         "minimum": 0
                     },
-                    "desc_product": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "discount_type": {
-                        "type": "string",
+                    "status": {
+                        "description": "0: active, 1: disabled, 2: deleted",
+                        "type": "integer",
                         "enum": [
-                            "percentage",
-                            "fixed"
-                        ],
-                        "nullable": true
-                    },
-                    "discount_amount": {
-                        "type": "number",
-                        "format": "float",
-                        "minimum": 0,
-                        "nullable": true
-                    },
-                    "start_date_disc": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "end_date_disc": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                            "0",
+                            "1",
+                            "2"
+                        ]
                     }
                 },
                 "type": "object"
@@ -1338,6 +1963,41 @@
                         "type": "number",
                         "format": "decimal",
                         "example": "100.00"
+                    }
+                },
+                "type": "object"
+            },
+            "StockProductRequest": {
+                "required": [
+                    "product_id",
+                    "user_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "example": 100
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "image": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -1423,81 +2083,101 @@
                 },
                 "type": "object"
             },
-            "Product": {
+            "AdjustmentProduct": {
                 "required": [
-                    "product_category_id",
-                    "product_name",
-                    "stock",
-                    "price"
+                    "product_id",
+                    "user_id",
+                    "stock_id",
+                    "type",
+                    "quantity",
+                    "created_by"
                 ],
                 "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
                     "product_id": {
-                        "type": "integer",
-                        "format": "int64"
+                        "type": "integer"
                     },
-                    "product_category_id": {
-                        "type": "integer",
-                        "format": "int64"
+                    "user_id": {
+                        "type": "integer"
                     },
-                    "product_name": {
-                        "type": "string",
-                        "maxLength": 255
+                    "stock_id": {
+                        "type": "integer"
                     },
-                    "picture": {
+                    "type": {
+                        "description": "0: plus, 1: minus",
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "note": {
                         "type": "string",
                         "nullable": true
                     },
-                    "stock": {
+                    "image": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
                         "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Product": {
+                "required": [
+                    "name",
+                    "price",
+                    "status",
+                    "created_by",
+                    "updated_by"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "image": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "price": {
                         "type": "number",
                         "format": "float"
                     },
-                    "desc_product": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "discount_type": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "discount_amount": {
-                        "type": "number",
-                        "format": "float",
-                        "nullable": true
-                    },
-                    "start_date_disc": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "end_date_disc": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                    "status": {
+                        "description": "0: active, 1: disabled, 2: deleted",
+                        "type": "integer",
+                        "minimum": 0
                     },
                     "created_by": {
-                        "type": "integer",
-                        "nullable": true
+                        "type": "integer"
                     },
                     "updated_by": {
-                        "type": "integer",
-                        "nullable": true
+                        "type": "integer"
                     },
-                    "deleted_by": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "created_date": {
+                    "created_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                        "format": "date-time"
                     },
-                    "updated_date": {
+                    "updated_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -1632,6 +2312,33 @@
                     },
                     "creator": {
                         "$ref": "#/components/schemas/User"
+                    }
+                },
+                "type": "object"
+            },
+            "StockProduct": {
+                "required": [
+                    "product_id",
+                    "user_id",
+                    "quantity"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -1855,6 +2562,14 @@
     },
     "tags": [
         {
+            "name": "Adjustment Products",
+            "description": "API Endpoints for managing adjustment products"
+        },
+        {
+            "name": "Files",
+            "description": "API Endpoints for file operations"
+        },
+        {
             "name": "Product Categories",
             "description": "API Endpoints for managing product categories"
         },
@@ -1869,6 +2584,10 @@
         {
             "name": "Shift Histories",
             "description": "API Endpoints for managing shift histories / cash management"
+        },
+        {
+            "name": "Stock Products",
+            "description": "API Endpoints for managing stock products"
         },
         {
             "name": "Transactions",

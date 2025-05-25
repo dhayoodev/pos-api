@@ -39,59 +39,43 @@ class DatabaseSeeder extends Seeder
 
         // Create sample products
         Product::create([
-            'product_category_id' => $electronics->product_category_id,
-            'product_name' => 'iPhone 15 Pro',
-            'picture' => 'https://www.digimap.co.id/cdn/shop/files/iPhone_15_Pro_Max_Blue_Titanium_PDP_Image_Position-1__GBEN.jpg',
-            'stock' => 50,
+            'name' => 'iPhone 15 Pro',
+            'image' => 'https://www.digimap.co.id/cdn/shop/files/iPhone_15_Pro_Max_Blue_Titanium_PDP_Image_Position-1__GBEN.jpg',
+            'description' => 'Latest iPhone with advanced features',
             'price' => 999.99,
-            'desc_product' => 'Latest iPhone with advanced features',
-            'discount_type' => 'percentage',
-            'discount_amount' => 10,
-            'start_date_disc' => now(),
-            'end_date_disc' => now()->addDays(30),
+            'status' => 0,
             'created_by' => $admin->id,
-            'created_date' => now()
+            'created_at' => now()
         ]);
 
         Product::create([
-            'product_category_id' => $electronics->product_category_id,
-            'product_name' => 'Samsung Galaxy S24',
-            'picture' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/97/MTA-154133629/brd-44261_samsung-galaxy-s24-5g-8-256gb_full02-d8b8db91.jpg',
-            'stock' => 45,
+            'name' => 'Samsung Galaxy S24',
+            'image' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/97/MTA-154133629/brd-44261_samsung-galaxy-s24-5g-8-256gb_full02-d8b8db91.jpg',
+            'description' => 'Latest Samsung flagship phone',
             'price' => 899.99,
-            'desc_product' => 'Latest Samsung flagship phone',
-            'discount_type' => 'fixed',
-            'discount_amount' => 100,
-            'start_date_disc' => now(),
-            'end_date_disc' => now()->addDays(15),
+            'status' => 0,
             'created_by' => $admin->id,
-            'created_date' => now()
+            'created_at' => now()
         ]);
 
         Product::create([
-            'product_category_id' => $clothing->product_category_id,
-            'product_name' => 'Nike Air Max',
-            'picture' => 'https://www.footlocker.id/media/catalog/product/cache/f57d6f7ebc711fc328170f0ddc174b08/0/1/01-NIKE-FFSSBNIK5-NIKDZ2628102-White.jpg',
-            'stock' => 100,
+            'name' => 'Nike Air Max',
+            'image' => 'https://www.footlocker.id/media/catalog/product/cache/f57d6f7ebc711fc328170f0ddc174b08/0/1/01-NIKE-FFSSBNIK5-NIKDZ2628102-White.jpg',
+            'description' => 'Comfortable running shoes',
             'price' => 129.99,
-            'desc_product' => 'Comfortable running shoes',
+            'status' => 0,
             'created_by' => $admin->id,
-            'created_date' => now()
+            'created_at' => now()
         ]);
 
         Product::create([
-            'product_category_id' => $books->product_category_id,
-            'product_name' => 'Laravel Up & Running',
-            'picture' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/95/MTA-176356210/no-brand_no-brand_full01.jpg',
-            'stock' => 75,
+            'name' => 'Laravel Up & Running',
+            'image' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/95/MTA-176356210/no-brand_no-brand_full01.jpg',
+            'description' => 'Learn Laravel framework from scratch',
             'price' => 49.99,
-            'desc_product' => 'Learn Laravel framework from scratch',
-            'discount_type' => 'percentage',
-            'discount_amount' => 15,
-            'start_date_disc' => now(),
-            'end_date_disc' => now()->addDays(7),
+            'status' => 0,
             'created_by' => $admin->id,
-            'created_date' => now()
+            'created_at' => now()
         ]);
 
         // Assuming we already have users and products from previous seeders
@@ -111,7 +95,7 @@ class DatabaseSeeder extends Seeder
         // Create transaction details for first transaction
         TransactionDetail::create([
             'trans_id' => $transaction1->trans_id,
-            'product_id' => Product::where('product_name', 'iPhone 15 Pro')->first()->product_id,
+            'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
             'qty' => 1,
             'price' => 999.99,
             'subtotal' => 999.99,
@@ -121,7 +105,7 @@ class DatabaseSeeder extends Seeder
 
         TransactionDetail::create([
             'trans_id' => $transaction1->trans_id,
-            'product_id' => Product::where('product_name', 'Laravel Up & Running')->first()->product_id,
+            'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
             'qty' => 1,
             'price' => 49.99,
             'subtotal' => 49.99,
@@ -142,7 +126,7 @@ class DatabaseSeeder extends Seeder
         // Create transaction details for second transaction
         TransactionDetail::create([
             'trans_id' => $transaction2->trans_id,
-            'product_id' => Product::where('product_name', 'iPhone 15 Pro')->first()->product_id,
+            'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
             'qty' => 2,
             'price' => 999.99,
             'subtotal' => 1999.98,
@@ -162,7 +146,7 @@ class DatabaseSeeder extends Seeder
 
         TransactionDetail::create([
             'trans_id' => $transaction3->trans_id,
-            'product_id' => Product::where('product_name', 'Laravel Up & Running')->first()->product_id,
+            'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
             'qty' => 1,
             'price' => 49.99,
             'subtotal' => 49.99,
