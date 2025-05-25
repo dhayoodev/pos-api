@@ -50,6 +50,13 @@ class ProductController extends Controller
      *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
+     *         name="stock",
+     *         in="query",
+     *         description="Filter stock quantity",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
@@ -90,6 +97,10 @@ class ProductController extends Controller
             ->selectRaw('COALESCE(SUM(CASE WHEN ' . ($request->has('user_id') ? 'stock_products.user_id = ' . $request->user_id : '1=1') . ' THEN stock_products.quantity ELSE 0 END), 0) as total_stock')
             ->leftJoin('stock_products', 'products.id', '=', 'stock_products.product_id')
             ->groupBy('products.id');
+
+        if ($request->has('stock')) {
+            $query->having('total_stock', '>=', $request->stock);
+        }
 
         if ($request->has('status')) {
             $query->where('products.status', $request->status);
