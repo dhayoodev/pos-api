@@ -7,6 +7,8 @@ use App\Http\Requests\TransactionRequest;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\Product;
@@ -22,24 +24,115 @@ class TransactionController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/transactions",
-     *     summary="List all transactions",
+     *     summary="List all transactions with filters and pagination",
      *     tags={"Transactions"},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         description="Filter by transaction status",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="user_id",
+     *         in="query",
+     *         description="Filter by user ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search in transaction number or customer name",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_from",
+     *         in="query",
+     *         description="Filter transactions from this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_to",
+     *         in="query",
+     *         description="Filter transactions to this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="List of transactions",
+     *         description="Successful operation",
      *         @OA\JsonContent(
-     *             type="array",
-     *             @OA\Items(ref="#/components/schemas/Transaction")
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Transaction")),
+     *             @OA\Property(property="links", type="object"),
+     *             @OA\Property(property="meta", type="object")
      *         )
-     *     ),
-     *     security={{"sanctum": {}}}
+     *     )
      * )
      */
-    public function index()
+    /* public function index()
     {
         return TransactionResource::collection(
             Transaction::with(['user', 'details.product', 'creator'])->get()
         );
+    } */
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $query = Transaction::query()->with(['user', 'details.product']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('payment_status', $request->status);
+        }
+
+        // Filter by user_id
+        if ($request->has('user_id') && $request->user_id !== '') {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Search functionality
+        /* if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('transaction_number', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('customer_phone', 'like', "%{$search}%");
+            });
+        } */
+
+        // Date range filter
+        if ($request->has('date_from') && $request->date_from !== '') {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        // Order by latest first
+        $query->orderBy('created_date', 'desc');
+
+        // Pagination
+        $transactions = $query->paginate($request->per_page ?? 15);
+
+        return TransactionResource::collection($transactions);
     }
 
     /**

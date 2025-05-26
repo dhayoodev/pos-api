@@ -109,6 +109,20 @@ class AdjustmentProductController extends Controller
      *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
+     *         name="date_from",
+     *         in="query",
+     *         description="Filter adjustment from this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_to",
+     *         in="query",
+     *         description="Filter adjustment to this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
@@ -155,8 +169,19 @@ class AdjustmentProductController extends Controller
             $query->where('type', $request->type);
         }
 
-        $perPage = $request->input('per_page', 15);
-        $adjustmentProducts = $query->latest('created_at')->paginate($perPage);
+        // Date range filter
+        if ($request->has('date_from') && $request->date_from !== '') {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Order by latest first
+        $query->orderBy('created_at', 'desc');
+
+        $adjustmentProducts = $query->latest('created_at')->paginate($request->per_page ?? 15);
         
         return AdjustmentProductResource::collection($adjustmentProducts);
     }

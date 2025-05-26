@@ -33,12 +33,12 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create product categories
-        $electronics = ProductCategory::create(['category_name' => 'Electronics']);
+        /* $electronics = ProductCategory::create(['category_name' => 'Electronics']);
         $clothing = ProductCategory::create(['category_name' => 'Clothing']);
-        $books = ProductCategory::create(['category_name' => 'Books']);
+        $books = ProductCategory::create(['category_name' => 'Books']); */
 
         // Create sample products
-        Product::create([
+       /*  Product::create([
             'name' => 'iPhone 15 Pro',
             'image' => 'https://www.digimap.co.id/cdn/shop/files/iPhone_15_Pro_Max_Blue_Titanium_PDP_Image_Position-1__GBEN.jpg',
             'description' => 'Latest iPhone with advanced features',
@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
             'status' => 0,
             'created_by' => $admin->id,
             'created_at' => now()
-        ]);
+        ]); */
 
         // Assuming we already have users and products from previous seeders
         $admin = User::where('email', 'admin@example.com')->first();

@@ -7,6 +7,7 @@ use App\Models\Shift;
 use App\Models\ShiftHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\ShiftRequest;
 use App\Http\Requests\ShiftHistoryRequest;
@@ -28,6 +29,27 @@ class ShiftController extends Controller
      *     summary="List all shifts with pagination",
      *     tags={"Shifts"},
      *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="user_id",
+     *         in="query",
+     *         description="Filter by user ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_from",
+     *         in="query",
+     *         description="Filter transactions from this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_to",
+     *         in="query",
+     *         description="Filter transactions to this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
@@ -59,45 +81,36 @@ class ShiftController extends Controller
     {
         return ShiftResource::collection(Shift::all());
     } */
-    /* public function index(): JsonResponse
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $shifts = Shift::with(['user', 'creator', 'updater'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = Shift::query()->active()->with(['user', 'histories']);
 
-        return response()->json([
-            'message' => 'Shifts retrieved successfully',
-            'data' => [
-                'shifts' => $shifts->items(),
-                'total' => $shifts->total(),
-                'per_page' => $shifts->perPage(),
-                'current_page' => $shifts->currentPage(),
-                'last_page' => $shifts->lastPage(),
-            ]
-        ]);
-    } */
-    public function index()
-    {
-        $perPage = request('per_page', 15);
-        return ShiftResource::collection(Shift::with('user')->active()->paginate($perPage));
-        /* $shifts = Shift::with('user')->active()->paginate($perPage);
+        // Filter by status
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('payment_status', $request->status);
+        }
 
-        $shiftsData = $shifts->map(function ($shift) {
-            $data = (new ShiftResource($shift))->resolve();
-            $data['cash_difference'] = $shift->expected_cash_balance - $shift->final_cash_balance;
-            return $data;
-        });
+        // Filter by user_id
+        if ($request->has('user_id') && $request->user_id !== '') {
+            $query->where('user_id', $request->user_id);
+        }
 
-        return response()->json([
-            'message' => 'Shifts retrieved successfully',
-            'data' => [
-                'shifts' => $shiftsData,
-                'total' => $shifts->total(),
-                'per_page' => $shifts->perPage(),
-                'current_page' => $shifts->currentPage(),
-                'last_page' => $shifts->lastPage(),
-            ]
-        ]); */
+        // Date range filter
+        if ($request->has('date_from') && $request->date_from !== '') {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Order by latest first
+        $query->orderBy('created_at', 'desc');
+
+        // Pagination
+        $shift = $query->paginate($request->per_page ?? 15);
+
+        return ShiftResource::collection($shift);
     }
 
     /**
@@ -152,7 +165,7 @@ class ShiftController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $expectedCash = $shift->cash_balance + $paidIn->sum('amount') - $paidOut->sum('amount');
+        $expectedCash = (float) $shift->cash_balance + (float) $paidIn->sum('amount') - (float) $paidOut->sum('amount');
 
         $array = [
             'cash_payments' => 0,
@@ -223,14 +236,11 @@ class ShiftController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $expectedCash = $shift->cash_balance + $paidIn->sum('amount') - $paidOut->sum('amount');
-
         $array = [
             'cash_payments' => 0,
             'cash_refunds' => 0,
             'paid_in' => $paidIn->sum('amount'),
             'paid_out' => $paidOut->sum('amount'),
-            'expected_cash' => $expectedCash,
             'gross_sales' => 0,
             'refunds' => 0,
             'discounts' => 0,
@@ -373,12 +383,10 @@ class ShiftController extends Controller
             $history->save();
 
             // Update shift balance
-            /* $shift->cash_balance += $validated['type'] == ShiftHistory::TYPE_INCOME 
+            $shift->expected_cash_balance += $validated['type'] == ShiftHistory::TYPE_INCOME 
                 ? $validated['amount'] 
                 : -$validated['amount'];
-            $shift->updated_by = $request->user()->id;
-            $shift->updated_at = now();
-            $shift->save(); */
+            $shift->save();
 
             return $history;
         });

@@ -38,7 +38,7 @@ class TransactionRequest extends FormRequest
             'date' => ['required', 'date'],
             'payment_status' => ['required', 'in:pending,paid,failed,refunded'],
             'details' => ['required', 'array', 'min:1'],
-            'details.*.product_id' => ['required', 'exists:products,product_id'],
+            'details.*.id' => ['required', 'exists:products,id'],
             'details.*.qty' => ['required', 'integer', 'min:1'],
         ];
     }

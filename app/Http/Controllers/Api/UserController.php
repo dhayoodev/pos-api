@@ -7,6 +7,8 @@ use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -22,6 +24,20 @@ class UserController extends Controller
      *     path="/api/v1/users",
      *     summary="List all users with pagination",
      *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="role",
+     *         in="query",
+     *         description="Filter by roles (0: admin, 1: cashier)",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=0)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search by employee name",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
@@ -49,10 +65,23 @@ class UserController extends Controller
      *     security={{"sanctum": {}}}
      * )
      */
-    public function index()
+    public function index(Request $request) : AnonymousResourceCollection
     {
-        $perPage = request('per_page', 15);
-        return UserResource::collection(User::active()->paginate($perPage));
+        $query = User::query()->active();
+        if ($request->has('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->has('search')) {
+            //$query->where('name', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+        return UserResource::collection($query->paginate($request->per_page ?? 15));
     }
 
     /**
