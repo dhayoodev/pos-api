@@ -159,12 +159,12 @@ class ShiftController extends Controller
         $paidIn = ShiftHistory::where('shift_id', $shift->id)
             ->where('type', 0)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->sum('amount');
 
         $paidOut = ShiftHistory::where('shift_id', $shift->id)
             ->where('type', 1)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->sum('amount');
 
         $cashPayments = Transaction::where('shift_id', $shift->id)
             ->where('payment_method', 'cash')
@@ -176,22 +176,53 @@ class ShiftController extends Controller
             ->where('payment_method', 'cash')
             ->where('payment_status', 'refunded')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->sum('total_price');
 
         $cashChanges = (float) $cashPayments->sum('total_payment') - $cashPayments->sum('total_price');
-        $expectedCash = (float) $shift->cash_balance + (float) $paidIn->sum('amount') - (float) $paidOut->sum('amount') + (float) $cashPayments->sum('total_payment') - $cashChanges - (float) $cashRefunds->sum('total_price');
+        $expectedCash = (float) $shift->cash_balance + $paidIn - $paidOut + $cashPayments->sum('total_payment') - $cashChanges - $cashRefunds;
+
+        $grossSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+
+        $refundSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+
+        $taxSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_tax');
+
+        $discounts = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->selectRaw('transactions.*, (SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal')
+            ->get()
+            ->sum(function ($transaction) {
+                if ($transaction->type_discount === 1) { // Fixed discount
+                    return $transaction->amount_discount;
+                } elseif ($transaction->type_discount === 2) { // Percentage discount
+                    return ($transaction->total_subtotal * $transaction->amount_discount) / 100;
+                }
+                return 0;
+            });
+
+        $netSales = (float) $grossSales - $refundSales - $taxSales;
 
         $array = [
             'cash_payments' => (float) $cashPayments->sum('total_payment'),
-            'cash_refunds' => (float) $cashRefunds->sum('total_price'),
+            'cash_refunds' => (float) $cashRefunds,
             'cash_changes' => $cashChanges,
-            'paid_in' => $paidIn->sum('amount'),
-            'paid_out' => $paidOut->sum('amount'),
+            'paid_in' => (float) $paidIn,
+            'paid_out' => (float) $paidOut,
             'expected_cash' => $expectedCash,
-            'gross_sales' => 0,
-            'refunds' => 0,
-            'discounts' => 0,
-            'net_sales' => 0,
+            'gross_sales' => (float) $grossSales,
+            'refunds' => (float) $refundSales,
+            'discounts' => (float) $discounts,
+            'tax_sales' => (float) $taxSales,
+            'net_sales' => $netSales,
         ];
 
         return response()->json([
@@ -244,22 +275,70 @@ class ShiftController extends Controller
         $paidIn = ShiftHistory::where('shift_id', $shift->id)
             ->where('type', 0)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->sum('amount');
 
         $paidOut = ShiftHistory::where('shift_id', $shift->id)
             ->where('type', 1)
             ->orderBy('created_at', 'desc')
+            ->sum('amount');
+
+        $cashPayments = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
             ->get();
 
+        $cashRefunds = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+
+        $cashChanges = (float) $cashPayments->sum('total_payment') - $cashPayments->sum('total_price');
+        $expectedCash = (float) $shift->cash_balance + $paidIn - $paidOut + $cashPayments->sum('total_payment') - $cashChanges - $cashRefunds;
+
+        $grossSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+
+        $refundSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+
+        $taxSales = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_tax');
+
+        $discounts = Transaction::where('shift_id', $shift->id)
+            ->where('payment_status', 'paid')
+            ->selectRaw('transactions.*, (SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal')
+            ->get()
+            ->sum(function ($transaction) {
+                if ($transaction->type_discount === 1) { // Fixed discount
+                    return $transaction->amount_discount;
+                } elseif ($transaction->type_discount === 2) { // Percentage discount
+                    return ($transaction->total_subtotal * $transaction->amount_discount) / 100;
+                }
+                return 0;
+            });
+
+        $netSales = (float) $grossSales - $refundSales - $taxSales;
+
         $array = [
-            'cash_payments' => 0,
-            'cash_refunds' => 0,
-            'paid_in' => $paidIn->sum('amount'),
-            'paid_out' => $paidOut->sum('amount'),
-            'gross_sales' => 0,
-            'refunds' => 0,
-            'discounts' => 0,
-            'net_sales' => 19,
+            'cash_payments' => (float) $cashPayments->sum('total_payment'),
+            'cash_refunds' => (float) $cashRefunds,
+            'cash_changes' => $cashChanges,
+            'paid_in' => (float) $paidIn,
+            'paid_out' => (float) $paidOut,
+            'expected_cash' => $expectedCash,
+            'gross_sales' => (float) $grossSales,
+            'refunds' => (float) $refundSales,
+            'discounts' => (float) $discounts,
+            'tax_sales' => (float) $taxSales,
+            'net_sales' => $netSales,
         ];
 
         return response()->json([
