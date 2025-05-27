@@ -99,7 +99,11 @@ class ProductController extends Controller
             ->groupBy('products.id');
 
         if ($request->has('stock')) {
-            $query->having('total_stock', '>=', $request->stock);
+            if ($request->stock == 0) {
+                $query->having('total_stock', $request->stock);
+            } else if ($request->stock == 1) {
+                $query->having('total_stock', '>=', $request->stock);
+            }
         }
 
         if ($request->has('status')) {
