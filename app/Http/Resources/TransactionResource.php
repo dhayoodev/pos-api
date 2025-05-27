@@ -10,19 +10,28 @@ class TransactionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->trans_id,
+            'id' => $this->id,
             'user' => [
-                'id' => $this->user->id,
-                'name' => $this->user->name,
+                'id' => $this->user?->id,
+                'name' => $this->user?->name,
             ],
-            'date' => $this->date,
+            'shift_id' => $this->shift_id,
+            'discount_id' => $this->discount_id,
+            'payment_method' => $this->payment_method,
+            'total_subtotal' => $this->total_subtotal,
             'total_price' => $this->total_price,
+            'total_payment' => $this->total_payment,
+            'total_tax' => $this->total_tax,
+            'type_discount' => $this->type_discount,
+            'amount_discount' => $this->amount_discount,
             'payment_status' => $this->payment_status,
+            'date' => $this->date,
+            'is_deleted' => $this->is_deleted,
             'details' => TransactionDetailResource::collection($this->details),
-            'created_date' => $this->created_date,
+            'created_at' => $this->created_at,
             'created_by' => $this->creator?->name,
-            'updated_date' => $this->updated_date,
+            'updated_at' => $this->updated_at,
             'updated_by' => $this->updater?->name,
         ];
     }
-} 
+}

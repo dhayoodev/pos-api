@@ -31,11 +31,11 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'image' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'description' => ['nullable', 'string'],
-            'price' => ['numeric', 'min:0'],
-            'status' => ['in:0,1,2']
+            'price' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', 'in:0,1,2']
         ];
     }
 

@@ -12,6 +12,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\Product;
+use App\Models\StockProduct;
+use App\Models\AdjustmentProduct;
+use Illuminate\Support\Carbon;
 
 /**
  * @OA\Tag(
@@ -95,7 +98,10 @@ class TransactionController extends Controller
     } */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Transaction::query()->with(['user', 'details.product']);
+        $query = Transaction::query()
+            ->active()
+            ->with(['user', 'details.product'])
+            ->selectRaw('transactions.*, (SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal');
 
         // Filter by status
         if ($request->has('status') && $request->status !== '') {
@@ -127,7 +133,7 @@ class TransactionController extends Controller
         }
 
         // Order by latest first
-        $query->orderBy('created_date', 'desc');
+        $query->orderBy('created_at', 'desc');
 
         // Pagination
         $transactions = $query->paginate($request->per_page ?? 15);
@@ -161,51 +167,106 @@ class TransactionController extends Controller
         // Start database transaction
         return DB::transaction(function () use ($request) {
             $validated = $request->validated();
-            
-            // Calculate totals and create details
-            $details = collect($validated['details'])->map(function ($detail) {
+
+            // Prepare details and validate stock
+            $details = collect($validated['details'])->map(function ($detail) use ($validated) {
+                // Fetch product
                 $product = Product::findOrFail($detail['product_id']);
-                
-                // Verify stock availability
-                if ($product->stock < $detail['qty']) {
+                // Check stock availability
+                $stockProduct = StockProduct::where('product_id', $detail['product_id'])
+                    ->where('user_id', $validated['user_id'])
+                    ->orderBy('created_at', 'desc')
+                    ->firstOrFail();
+
+                // Check if there's enough stock for the transaction (excluding refunds
+                if ($stockProduct->quantity < $detail['quantity'] && $validated['payment_status'] !== 'refunded') {
                     throw ValidationException::withMessages([
                         'details' => ["Insufficient stock for product: {$product->product_name}"]
                     ]);
                 }
-                
-                // Calculate price and subtotal
+
                 $price = $product->price;
-                $subtotal = $price * $detail['qty'];
-                
-                // Decrease stock
-                $product->decrement('stock', $detail['qty']);
-                
+                $subtotal = $price * $detail['quantity'];
+
                 return [
                     'product_id' => $detail['product_id'],
-                    'qty' => $detail['qty'],
+                    'quantity' => $detail['quantity'],
                     'price' => $price,
                     'subtotal' => $subtotal,
-                    'created_by' => auth()->id(),
-                    'created_date' => now()
                 ];
             });
-            
-            // Create transaction
+
+            // Compute total price from details
+            $totalPrice = $details->sum('subtotal');
+
+            // Create transaction with updated schema fields
             $transaction = Transaction::create([
                 'user_id' => $validated['user_id'],
-                'date' => $validated['date'],
+                'shift_id' => $validated['shift_id'],
+                'discount_id' => $validated['discount_id'],
+                'payment_method' => $validated['payment_method'],
+                'total_price' => $validated['total_price'],
+                'total_payment' => $validated['total_payment'],
+                'total_tax' => $validated['total_tax'],
+                'type_discount' => $validated['type_discount'],
+                'amount_discount' => $validated['amount_discount'],
                 'payment_status' => $validated['payment_status'],
-                'total_price' => $details->sum('subtotal'),
+                'date' => $validated['date'],
                 'created_by' => auth()->id(),
-                'created_date' => now()
+                'created_at' => now(),
             ]);
-            
-            // Create transaction details
+
+            // Save transaction details
             $transaction->details()->createMany($details->toArray());
-            
-            // Load relationships for response
+
             $transaction->load(['user', 'details.product', 'creator']);
-            
+
+            // Adjust stock and create adjustment product
+            $details->each(function ($detail) use ($transaction) {
+                // Adjust stock
+                $stockProduct = StockProduct::where('product_id', $detail['product_id'])
+                    ->where('user_id', $transaction->user_id)
+                    ->orderBy('created_at', 'desc')
+                    ->firstOrFail();
+
+                // Create adjustment product
+                $oldQuantity = $stockProduct->quantity;
+                if ($transaction->payment_status === 'refunded') {
+                    $type = AdjustmentProduct::TYPE_PLUS;
+                    // Calculate new quantity after refunding the product
+                    $newQuantity = $stockProduct->quantity + $detail['quantity'];
+                } else {
+                    $type = AdjustmentProduct::TYPE_MINUS;
+                    // Calculate new quantity after selling the product
+                    $newQuantity = $stockProduct->quantity - $detail['quantity'];
+                }
+
+                // Adjustment product
+                $note = 'Transaction #' . $transaction->id;
+                AdjustmentProduct::create([
+                    'product_id' => $detail['product_id'],
+                    'user_id' => $transaction->user_id,
+                    'stock_id' => $stockProduct->id,
+                    'type' => $type,
+                    'quantity' => $detail['quantity'],
+                    'note' => $note . ' (Initial Stock: ' . $oldQuantity . ', Actual Stock: ' . $newQuantity . ')',
+                    'image' => '',
+                    'created_by' => auth()->id(),
+                    'created_at' => Carbon::now(),
+                ]);
+
+                // Update stock product
+                $stockProduct->update(['quantity' => $newQuantity]);
+            });
+
+            // Adjustment shift expected cash balance
+            $shift = $transaction->shift;
+            if ($transaction->payment_status === 'paid' && $transaction->payment_method === 'cash') {
+                $shift->update(['expected_cash_balance' => $shift->expected_cash_balance + $transaction->total_payment]);
+            } elseif ($transaction->payment_status === 'refunded' && $transaction->payment_method === 'cash') {
+                $shift->update(['expected_cash_balance' => $shift->expected_cash_balance - $transaction->total_payment]);
+            }
+
             return new TransactionResource($transaction);
         });
     }
@@ -265,11 +326,10 @@ class TransactionController extends Controller
     public function destroy(Transaction $transaction)
     {
         $transaction->update([
-            'is_deleted' => true,
+            'is_deleted' => 1,
             'deleted_by' => auth()->id(),
             'deleted_date' => now(),
         ]);
-        
-        return response()->json(null, 204);
+        return new TransactionResource($transaction);
     }
-} 
+}

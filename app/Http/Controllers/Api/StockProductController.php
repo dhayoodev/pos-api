@@ -91,6 +91,18 @@ class StockProductController extends Controller
     {
         $validated = $request->validated();
 
+        // Check if stock already exists for this product and user
+        $existingStock = StockProduct::where('product_id', $validated['product_id'])
+            ->where('user_id', $validated['user_id'])
+            ->first();
+
+        if ($existingStock) {
+            return response()->json([
+                'message' => 'Stock already exists for this product and user',
+                'data' => new StockProductResource($existingStock)
+            ], 409);
+        }
+
         $stockProduct = StockProduct::create([
             'product_id' => $validated['product_id'],
             'user_id' => $validated['user_id'],
@@ -100,14 +112,15 @@ class StockProductController extends Controller
         ]);
 
         // Create adjustment record for new stock
+        $note = $validated['note'] ?? 'Initial stock';
         AdjustmentProduct::create([
             'product_id' => $validated['product_id'],
             'user_id' => $validated['user_id'],
             'stock_id' => $stockProduct->id,
             'type' => AdjustmentProduct::TYPE_PLUS,
             'quantity' => $validated['quantity'],
-            'note' => $validated['note'] ?? 'Initial stock',
-            'image' => $validated['image'],
+            'note' => $note . ' (Initial Stock: 0, Actual Stock: ' . $validated['quantity'] . ')',
+            'image' => $validated['image'] ?? '',
             'created_by' => auth()->id(),
             'created_at' => Carbon::now(),
         ]);
@@ -196,7 +209,7 @@ class StockProductController extends Controller
                 'type' => $type,
                 'quantity' => $quantity,
                 'note' => $note . ' (Initial Stock: ' . $oldQuantity . ', Actual Stock: ' . $newQuantity . ')',
-                'image' => $validated['image'],
+                'image' => $validated['image'] ?? '',
                 'created_by' => auth()->id(),
                 'created_at' => Carbon::now(),
             ]);

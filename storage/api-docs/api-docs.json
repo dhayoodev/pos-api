@@ -313,6 +313,227 @@
                 }
             }
         },
+        "/api/v1/discounts": {
+            "get": {
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "List all discounts with pagination",
+                "operationId": "7b617ba48965e1325b6ecf86b2c22396",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by discount name",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Filter type of discount",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of discounts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Discount"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Create a new discount",
+                "operationId": "862d39a05295635bec53a33796c61da4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscountRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Discount created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Discount"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/discounts/{id}": {
+            "get": {
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Get discount details",
+                "operationId": "dbc2a5a4219e5621a662560bb435a852",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Discount"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Update a discount",
+                "operationId": "4767d152f777975eb0c47383711917aa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DiscountRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Discount updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Discount"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Delete a discount",
+                "operationId": "21a50d1fad06fcb1a84a0f69167981df",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Discount deleted successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/files/{path}": {
             "get": {
                 "tags": [
@@ -2010,6 +2231,46 @@
                 },
                 "type": "object"
             },
+            "DiscountRequest": {
+                "required": [
+                    "name",
+                    "type",
+                    "amount"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "type": {
+                        "description": "Discount type (1: fixed, 2: percent)",
+                        "type": "integer",
+                        "enum": [
+                            1,
+                            2
+                        ]
+                    },
+                    "amount": {
+                        "description": "Discount amount (for percentage: 1-100, for fixed: positive integer)",
+                        "type": "integer"
+                    },
+                    "status": {
+                        "description": "Discount status (0: active, 1: disabled, 2: deleted)",
+                        "type": "integer",
+                        "default": 0,
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "ProductCategoryRequest": {
                 "required": [
                     "category_name"
@@ -2157,6 +2418,8 @@
             "TransactionRequest": {
                 "required": [
                     "user_id",
+                    "shift_id",
+                    "payment_method",
                     "date",
                     "payment_status",
                     "details"
@@ -2166,9 +2429,50 @@
                         "type": "integer",
                         "format": "int64"
                     },
+                    "shift_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "discount_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "enum": [
+                            "bank_transfer",
+                            "e_wallet",
+                            "qris",
+                            "cash",
+                            "card"
+                        ]
+                    },
                     "date": {
                         "type": "string",
                         "format": "date-time"
+                    },
+                    "total_price": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "total_payment": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "total_tax": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "type_discount": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ]
+                    },
+                    "amount_discount": {
+                        "type": "integer"
                     },
                     "payment_status": {
                         "type": "string",
@@ -2184,14 +2488,14 @@
                         "items": {
                             "required": [
                                 "product_id",
-                                "qty"
+                                "quantity"
                             ],
                             "properties": {
                                 "product_id": {
                                     "type": "integer",
                                     "format": "int64"
                                 },
-                                "qty": {
+                                "quantity": {
                                     "type": "integer",
                                     "minimum": 1
                                 }
@@ -2272,6 +2576,49 @@
                     "image": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Discount": {
+                "required": [
+                    "name",
+                    "type",
+                    "amount",
+                    "status",
+                    "created_by"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "type": {
+                        "description": "1: fixed, 2: percent",
+                        "type": "integer"
+                    },
+                    "amount": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "description": "0 = active, 1 = disaled, 2 = deleted",
+                        "type": "integer",
+                        "minimum": 0
                     },
                     "created_at": {
                         "type": "string",
@@ -2498,75 +2845,98 @@
             "Transaction": {
                 "required": [
                     "user_id",
-                    "date",
+                    "shift_id",
+                    "payment_method",
                     "total_price",
-                    "payment_status"
+                    "total_payment",
+                    "total_tax",
+                    "type_discount",
+                    "amount_discount",
+                    "payment_status",
+                    "date",
+                    "created_by",
+                    "updated_by"
                 ],
                 "properties": {
-                    "trans_id": {
+                    "id": {
                         "type": "integer",
                         "format": "int64"
                     },
                     "user_id": {
-                        "type": "integer",
-                        "format": "int64"
+                        "type": "integer"
                     },
-                    "date": {
+                    "shift_id": {
+                        "type": "integer"
+                    },
+                    "discount_id": {
+                        "type": "integer"
+                    },
+                    "payment_method": {
                         "type": "string",
-                        "format": "date-time"
+                        "enum": [
+                            "bank_transfer",
+                            "e_wallet",
+                            "qris",
+                            "cash",
+                            "card"
+                        ]
                     },
                     "total_price": {
                         "type": "number",
                         "format": "float"
                     },
+                    "total_payment": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "total_tax": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "type_discount": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ]
+                    },
+                    "amount_discount": {
+                        "type": "integer"
+                    },
                     "payment_status": {
-                        "type": "string"
-                    },
-                    "is_hide": {
-                        "type": "boolean",
-                        "nullable": true
-                    },
-                    "note_hide": {
                         "type": "string",
-                        "nullable": true
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ]
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
                     },
                     "is_deleted": {
-                        "type": "boolean",
-                        "nullable": true
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1
+                        ]
                     },
-                    "note_deleted": {
+                    "created_at": {
                         "type": "string",
-                        "nullable": true
+                        "format": "date-time"
                     },
                     "created_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
                     },
                     "updated_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "deleted_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "created_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "updated_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "deleted_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -2575,12 +2945,12 @@
                 "required": [
                     "trans_id",
                     "product_id",
-                    "qty",
+                    "quantity",
                     "price",
                     "subtotal"
                 ],
                 "properties": {
-                    "trans_detail_id": {
+                    "id": {
                         "type": "integer",
                         "format": "int64"
                     },
@@ -2592,7 +2962,7 @@
                         "type": "integer",
                         "format": "int64"
                     },
-                    "qty": {
+                    "quantity": {
                         "type": "integer",
                         "minimum": 1
                     },
@@ -2603,52 +2973,6 @@
                     "subtotal": {
                         "type": "number",
                         "format": "float"
-                    },
-                    "is_hide": {
-                        "type": "boolean",
-                        "nullable": true
-                    },
-                    "note_hide": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "is_deleted": {
-                        "type": "boolean",
-                        "nullable": true
-                    },
-                    "note_deleted": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "created_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "updated_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "deleted_by": {
-                        "type": "integer",
-                        "format": "int64",
-                        "nullable": true
-                    },
-                    "created_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "updated_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "deleted_date": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -2716,6 +3040,10 @@
         {
             "name": "Adjustment Products",
             "description": "API Endpoints for managing adjustment products"
+        },
+        {
+            "name": "Discounts",
+            "description": "API Endpoints for managing discounts"
         },
         {
             "name": "Files",

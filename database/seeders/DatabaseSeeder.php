@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\Shift;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use Illuminate\Database\Seeder;
@@ -33,36 +34,16 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create product categories
-        /* $electronics = ProductCategory::create(['category_name' => 'Electronics']);
-        $clothing = ProductCategory::create(['category_name' => 'Clothing']);
-        $books = ProductCategory::create(['category_name' => 'Books']); */
+        //$electronics = ProductCategory::create(['category_name' => 'Electronics']);
+        //$clothing = ProductCategory::create(['category_name' => 'Clothing']);
+        //$books = ProductCategory::create(['category_name' => 'Books']);
 
         // Create sample products
-       /*  Product::create([
+        Product::create([
             'name' => 'iPhone 15 Pro',
-            'image' => 'https://www.digimap.co.id/cdn/shop/files/iPhone_15_Pro_Max_Blue_Titanium_PDP_Image_Position-1__GBEN.jpg',
+            'image' => '',
             'description' => 'Latest iPhone with advanced features',
-            'price' => 999.99,
-            'status' => 0,
-            'created_by' => $admin->id,
-            'created_at' => now()
-        ]);
-
-        Product::create([
-            'name' => 'Samsung Galaxy S24',
-            'image' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/97/MTA-154133629/brd-44261_samsung-galaxy-s24-5g-8-256gb_full02-d8b8db91.jpg',
-            'description' => 'Latest Samsung flagship phone',
-            'price' => 899.99,
-            'status' => 0,
-            'created_by' => $admin->id,
-            'created_at' => now()
-        ]);
-
-        Product::create([
-            'name' => 'Nike Air Max',
-            'image' => 'https://www.footlocker.id/media/catalog/product/cache/f57d6f7ebc711fc328170f0ddc174b08/0/1/01-NIKE-FFSSBNIK5-NIKDZ2628102-White.jpg',
-            'description' => 'Comfortable running shoes',
-            'price' => 129.99,
+            'price' => 50000.00,
             'status' => 0,
             'created_by' => $admin->id,
             'created_at' => now()
@@ -70,88 +51,100 @@ class DatabaseSeeder extends Seeder
 
         Product::create([
             'name' => 'Laravel Up & Running',
-            'image' => 'https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full/catalog-image/95/MTA-176356210/no-brand_no-brand_full01.jpg',
+            'image' => '',
             'description' => 'Learn Laravel framework from scratch',
-            'price' => 49.99,
+            'price' => 20000.00,
             'status' => 0,
             'created_by' => $admin->id,
             'created_at' => now()
-        ]); */
+        ]);
 
         // Assuming we already have users and products from previous seeders
         $admin = User::where('email', 'admin@example.com')->first();
         $customer = User::where('email', 'cashier@example.com')->first();
+
+        // Create sample shift for cashier
+        $shift = Shift::create([
+            'user_id' => $customer->id,
+            'cash_balance' => 1000.00,
+            'expected_cash_balance' => 1000.00,
+            'final_cash_balance' => 0.00,
+            'created_at' => now(),
+            'created_by' => $admin->id
+        ]);
         
-        // Create sample transactions
-        $transaction1 = Transaction::create([
+        $commonData = [
+            'shift_id' => $shift->id,
+            'payment_method' => 'cash',
+            'total_tax' => 0.00,
+            'type_discount' => 0,
+            'amount_discount' => 0,
+        ];
+        
+        // Create transaction 1 (paid)
+        $transaction1 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now(),
-            'total_price' => 1049.98, // Will be calculated from details
+            'total_price' => 70000.00,
+            'total_payment' => 100000.00,
             'payment_status' => 'paid',
             'created_by' => $admin->id,
-            'created_date' => now()
-        ]);
-
-        // Create transaction details for first transaction
+            'created_at' => now(),
+        ], $commonData));
+        
         TransactionDetail::create([
-            'trans_id' => $transaction1->trans_id,
+            'trans_id' => $transaction1->id,
             'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
-            'qty' => 1,
-            'price' => 999.99,
-            'subtotal' => 999.99,
-            'created_by' => $admin->id,
-            'created_date' => now()
+            'quantity' => 1,
+            'price' => 50000.00,
+            'subtotal' => 50000.00,
         ]);
-
+        
         TransactionDetail::create([
-            'trans_id' => $transaction1->trans_id,
+            'trans_id' => $transaction1->id,
             'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
-            'qty' => 1,
-            'price' => 49.99,
-            'subtotal' => 49.99,
-            'created_by' => $admin->id,
-            'created_date' => now()
+            'quantity' => 1,
+            'price' => 20000.00,
+            'subtotal' => 20000.00,
         ]);
-
-        // Create another transaction
-        $transaction2 = Transaction::create([
+        
+        // Create transaction 2 (pending)
+        $transaction2 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now()->subDays(2),
-            'total_price' => 1999.98,
+            'total_price' => 40000.00,
+            'total_payment' => 40000.00,
             'payment_status' => 'pending',
             'created_by' => $admin->id,
-            'created_date' => now()->subDays(2)
-        ]);
-
-        // Create transaction details for second transaction
+            'created_at' => now()->subDays(2),
+        ], $commonData));
+        
         TransactionDetail::create([
-            'trans_id' => $transaction2->trans_id,
-            'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
-            'qty' => 2,
-            'price' => 999.99,
-            'subtotal' => 1999.98,
-            'created_by' => $admin->id,
-            'created_date' => now()->subDays(2)
+            'trans_id' => $transaction2->id,
+            'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
+            'quantity' => 2,
+            'price' => 20000.00,
+            'subtotal' => 40000.00,
         ]);
-
-        // Create a failed transaction
-        $transaction3 = Transaction::create([
+        
+        // Create transaction 3 (failed)
+        $transaction3 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now()->subDays(5),
-            'total_price' => 49.99,
+            'total_price' => 50000.00,
+            'total_payment' => 50000.00,
             'payment_status' => 'failed',
             'created_by' => $admin->id,
-            'created_date' => now()->subDays(5)
-        ]);
-
+            'created_at' => now()->subDays(5),
+            'total_payment' => 0,
+        ], $commonData));
+        
         TransactionDetail::create([
-            'trans_id' => $transaction3->trans_id,
-            'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
-            'qty' => 1,
-            'price' => 49.99,
-            'subtotal' => 49.99,
-            'created_by' => $admin->id,
-            'created_date' => now()->subDays(5)
+            'trans_id' => $transaction3->id,
+            'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
+            'quantity' => 1,
+            'price' => 50000.00,
+            'subtotal' => 50000.00,
         ]);
     }
 }

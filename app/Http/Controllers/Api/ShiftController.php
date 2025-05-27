@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Shift;
 use App\Models\ShiftHistory;
+use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -165,18 +166,32 @@ class ShiftController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $expectedCash = (float) $shift->cash_balance + (float) $paidIn->sum('amount') - (float) $paidOut->sum('amount');
+        $cashPayments = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $cashRefunds = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $cashChanges = (float) $cashPayments->sum('total_payment') - $cashPayments->sum('total_price');
+        $expectedCash = (float) $shift->cash_balance + (float) $paidIn->sum('amount') - (float) $paidOut->sum('amount') + (float) $cashPayments->sum('total_payment') - $cashChanges - (float) $cashRefunds->sum('total_price');
 
         $array = [
-            'cash_payments' => 0,
-            'cash_refunds' => 0,
+            'cash_payments' => (float) $cashPayments->sum('total_payment'),
+            'cash_refunds' => (float) $cashRefunds->sum('total_price'),
+            'cash_changes' => $cashChanges,
             'paid_in' => $paidIn->sum('amount'),
             'paid_out' => $paidOut->sum('amount'),
             'expected_cash' => $expectedCash,
             'gross_sales' => 0,
             'refunds' => 0,
             'discounts' => 0,
-            'net_sales' => 19,
+            'net_sales' => 0,
         ];
 
         return response()->json([

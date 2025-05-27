@@ -114,4 +114,9 @@ class Shift extends Authenticatable
     {
         return $this->hasMany(ShiftHistory::class);
     }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }

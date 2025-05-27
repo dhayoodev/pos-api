@@ -1,15 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductCategoryController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\TransactionController;
-use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\ShiftController;
-use App\Http\Controllers\Api\ShiftHistoryController;
 use App\Http\Controllers\Api\StockProductController;
 use App\Http\Controllers\Api\AdjustmentProductController;
+use App\Http\Controllers\Api\ShiftController;
+use App\Http\Controllers\Api\ShiftHistoryController;
+use App\Http\Controllers\Api\DiscountController;
+use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\FileController;
 
 // Public routes
@@ -23,6 +24,8 @@ Route::group([
     'prefix' => 'v1',
     'middleware' => ['auth:sanctum']
 ], function () {
+    Route::apiResource('discounts', DiscountController::class);
+
     Route::apiResource('product-categories', ProductCategoryController::class);
     Route::apiResource('products', ProductController::class)->except(['update']);
     Route::post('products/{product}', [ProductController::class, 'update']);

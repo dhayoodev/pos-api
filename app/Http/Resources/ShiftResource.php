@@ -21,6 +21,7 @@ class ShiftResource extends JsonResource
             'creator' => new UserResource($this->whenLoaded('creator')),
             'updater' => new UserResource($this->whenLoaded('updater')),
             'histories' => ShiftHistoryResource::collection($this->whenLoaded('histories')),
+            'transactions' => TransactionResource::collection($this->whenLoaded('transactions')),
         ];
     }
 }

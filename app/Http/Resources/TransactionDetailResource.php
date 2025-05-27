@@ -10,13 +10,11 @@ class TransactionDetailResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->trans_detail_id,
+            'id' => $this->id,
             'product' => new ProductResource($this->product),
-            'quantity' => $this->qty,
+            'quantity' => $this->quantity,
             'price' => $this->price,
             'subtotal' => $this->subtotal,
-            'created_date' => $this->created_date,
-            'created_by' => $this->creator?->name,
         ];
     }
-} 
+}
