@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Shift;
+use App\Models\StockProduct;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use Illuminate\Database\Seeder;
@@ -63,6 +64,22 @@ class DatabaseSeeder extends Seeder
         $admin = User::where('email', 'admin@example.com')->first();
         $customer = User::where('email', 'cashier@example.com')->first();
 
+        // Create sample stocks for products
+        StockProduct::create([
+            'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
+            'user_id' => $customer->id,
+            'quantity' => 10,
+            'created_by' => $admin->id,
+            'created_at' => now()
+        ]);
+        StockProduct::create([
+            'product_id' => Product::where('name', 'Laravel Up & Running')->first()->id,
+            'user_id' => $customer->id,
+            'quantity' => 5,
+            'created_by' => $admin->id,
+            'created_at' => now()
+        ]);
+
         // Create sample shift for cashier
         $shift = Shift::create([
             'user_id' => $customer->id,
@@ -72,7 +89,8 @@ class DatabaseSeeder extends Seeder
             'created_at' => now(),
             'created_by' => $admin->id
         ]);
-        
+
+        // Create sample transactions for cashier
         $commonData = [
             'shift_id' => $shift->id,
             'payment_method' => 'cash',
@@ -108,13 +126,13 @@ class DatabaseSeeder extends Seeder
             'subtotal' => 20000.00,
         ]);
         
-        // Create transaction 2 (pending)
+        // Create transaction 2 (paid)
         $transaction2 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now()->subDays(2),
             'total_price' => 40000.00,
             'total_payment' => 40000.00,
-            'payment_status' => 'pending',
+            'payment_status' => 'paid',
             'created_by' => $admin->id,
             'created_at' => now()->subDays(2),
         ], $commonData));
@@ -125,6 +143,10 @@ class DatabaseSeeder extends Seeder
             'quantity' => 2,
             'price' => 20000.00,
             'subtotal' => 40000.00,
+        ]);
+        
+        $shift->update([
+            'expected_cash_balance' => $shift->expected_cash_balance + $transaction1->total_price + $transaction2->total_price,
         ]);
         
         // Create transaction 3 (failed)

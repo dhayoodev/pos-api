@@ -49,6 +49,8 @@ class Transaction extends Model
         'payment_status',
         'date',
         'is_deleted',
+        'type_reason',
+        'reason',
         'created_at',
         'created_by',
         'updated_at',

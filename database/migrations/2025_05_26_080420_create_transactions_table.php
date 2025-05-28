@@ -22,6 +22,8 @@ return new class extends Migration
             $table->enum('payment_status', ['pending', 'paid', 'failed', 'refunded'])->nullable();
             $table->timestamp('date')->nullable();
             $table->tinyInteger('is_deleted')->default(0)->comment('0: no, 1: yes');
+            $table->enum('type_reason', ['0', '1', '2', '3'])->comment('0: Produk Return, 1: Misplaced Transaction, 2:Order cancelation, 3: Others')->nullable();
+            $table->text('reason')->nullable();
             $table->timestamp('created_at')->useCurrent();
             $table->foreignId('created_by')->constrained('users', 'id');
             $table->timestamp('updated_at')->nullable();

@@ -2483,6 +2483,24 @@
                             "refunded"
                         ]
                     },
+                    "trans_id": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "type_reason": {
+                        "type": "string",
+                        "enum": [
+                            "0",
+                            "1",
+                            "2",
+                            "3",
+                            "4"
+                        ]
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "details": {
                         "type": "array",
                         "items": {

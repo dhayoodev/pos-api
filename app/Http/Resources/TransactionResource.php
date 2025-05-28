@@ -27,6 +27,8 @@ class TransactionResource extends JsonResource
             'payment_status' => $this->payment_status,
             'date' => $this->date,
             'is_deleted' => $this->is_deleted,
+            'type_reason' => $this->type_reason,
+            'reason' => $this->reason,
             'details' => TransactionDetailResource::collection($this->details),
             'created_at' => $this->created_at,
             'created_by' => $this->creator?->name,

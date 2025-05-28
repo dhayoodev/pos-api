@@ -199,6 +199,22 @@ class TransactionController extends Controller
             // Compute total price from details
             $totalPrice = $details->sum('subtotal');
 
+            // Create reason refund
+            $reason = "";
+            if ($validated['trans_id']) {
+                $reason .= 'Refund Transaction #' . $validated['trans_id'];
+            }
+            // type_reason 0: Produk Return, 1: Misplaced Transaction, 2:Order cancelation, 3: Others
+            if ($validated['type_reason'] && $validated['type_reason'] === '0') {
+                $reason.= ' (Produk Return)';
+            } elseif ($validated['type_reason'] && $validated['type_reason'] === '1') {
+                $reason.= ' (Misplaced Transaction)';
+            } elseif ($validated['type_reason'] && $validated['type_reason'] === '2') {
+                $reason.= ' (Order cancelation)';
+            } elseif ($validated['type_reason'] && $validated['reason'] && $validated['type_reason'] === '3') {
+                $reason .= ' ('. $validated['reason'] . ')';
+            }
+
             // Create transaction with updated schema fields
             $transaction = Transaction::create([
                 'user_id' => $validated['user_id'],
@@ -212,6 +228,8 @@ class TransactionController extends Controller
                 'amount_discount' => $validated['amount_discount'],
                 'payment_status' => $validated['payment_status'],
                 'date' => $validated['date'],
+                'type_reason' => $validated['type_reason'],
+                'reason' => $reason,
                 'created_by' => auth()->id(),
                 'created_at' => now(),
             ]);

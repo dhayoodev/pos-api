@@ -21,6 +21,9 @@ use Illuminate\Foundation\Http\FormRequest;
  *     @OA\Property(property="type_discount", type="integer", enum={0, 1, 2}),
  *     @OA\Property(property="amount_discount", type="integer"),
  *     @OA\Property(property="payment_status", type="string", enum={"pending", "paid", "failed", "refunded"}),
+ *     @OA\Property(property="trans_id", type="integer", format="int64"),
+ *     @OA\Property(property="type_reason", type="string", enum={"0", "1", "2", "3", "4"}),
+ *     @OA\Property(property="reason", type="string", nullable=true),
  *     @OA\Property(
  *         property="details",
  *         type="array",
@@ -55,6 +58,9 @@ class TransactionRequest extends FormRequest
             'type_discount' => ['required', 'in:0,1,2'],
             'amount_discount' => ['required', 'integer'],
             'payment_status' => ['required', 'in:pending,paid,failed,refunded'],
+            'trans_id' => ['nullable', 'integer', 'exists:transactions,id'],
+            'type_reason' => ['nullable', 'in:0,1,2,3,4'],
+            'reason' => ['nullable', 'string'],
 
             'details' => ['required', 'array', 'min:1'],
             'details.*.product_id' => ['required', 'exists:products,id'],
