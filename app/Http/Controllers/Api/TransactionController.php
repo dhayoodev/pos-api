@@ -214,19 +214,7 @@ class TransactionController extends Controller
         $perPage = $request->input('per_page', 15);
         $page = $request->input('page', 1);
         
-        // First, get the distinct dates with transaction counts and totals
-        /* $datesQuery = Transaction::query()
-            ->select([
-                DB::raw('DATE(created_at) as trans_date'),
-                DB::raw('COUNT(*) as transaction_count'),
-                DB::raw('SUM(total_price) as sum_price'),
-                DB::raw('SUM(total_payment) as sum_payment'),
-                DB::raw('SUM(total_tax) as sum_tax'),
-            ])
-            ->active()
-            ->groupBy('trans_date')
-            ->orderBy('trans_date', 'desc'); */
-
+        // First, get the distinct dates with transaction data
         $datesQuery = Transaction::query()
             ->select([
                 DB::raw('DATE(transactions.created_at) as trans_date'),
@@ -238,7 +226,21 @@ class TransactionController extends Controller
                 DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' THEN transactions.total_price ELSE 0 END) as sum_paid_price'),
                 DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.total_price ELSE 0 END) as sum_refunded_price'),
                 DB::raw('SUM(DISTINCT transactions.total_payment) as sum_payment'),
-                DB::raw('SUM(DISTINCT transactions.total_tax) as sum_tax')
+                DB::raw('SUM(DISTINCT transactions.total_tax) as sum_tax'),
+                DB::raw('COALESCE(SUM(CASE 
+                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 1 AND transactions.payment_status = \'paid\'
+                    THEN transactions.amount_discount 
+                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = \'paid\'
+                    THEN (transaction_details.subtotal * transactions.amount_discount / 100)
+                    ELSE 0 
+                END), 0) as sum_paid_discount'),
+                DB::raw('COALESCE(SUM(CASE 
+                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 1 AND transactions.payment_status = \'refunded\'
+                    THEN transactions.amount_discount 
+                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = \'refunded\'
+                    THEN (transaction_details.subtotal * transactions.amount_discount / 100)
+                    ELSE 0 
+                END), 0) as sum_refunded_discount')
             ])
             ->leftJoin('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
             ->active()
@@ -246,24 +248,19 @@ class TransactionController extends Controller
             ->groupBy('trans_date')
             ->orderBy('trans_date', 'desc');
 
-        // Apply status filter if specific status is provided
-        if ($request->has('status') && $request->status !== '') {
-            $datesQuery->where('payment_status', $request->status);
-        }
-
         // Apply user_id filter
         if ($request->has('user_id') && $request->user_id !== '') {
             $datesQuery->where('user_id', $request->user_id);
         }
 
         // Apply date range filter if needed
-        /* if ($request->has('date_from') && $request->date_from !== '') {
+        if ($request->has('date_from') && $request->date_from !== '') {
             $datesQuery->whereDate('created_at', '>=', $request->date_from);
         }
 
         if ($request->has('date_to') && $request->date_to !== '') {
             $datesQuery->whereDate('created_at', '<=', $request->date_to);
-        } */
+        }
 
         // Get paginated dates
         $dates = $datesQuery->paginate($perPage, ['*'], 'page', $page);
@@ -311,13 +308,13 @@ class TransactionController extends Controller
                     'paid' => [
                         'subtotal' => (float) $dateInfo->sum_paid_subtotal,
                         'total' => (float) $dateInfo->sum_paid_price,
+                        'discount' => (float) $dateInfo->sum_paid_discount,
                     ],
                     'refunded' => [
                         'subtotal' => (float) $dateInfo->sum_refunded_subtotal,
                         'total' => (float) $dateInfo->sum_refunded_price,
+                        'discount' => (float) $dateInfo->sum_refunded_discount,
                     ],
-                    'total_payment' => (float) $dateInfo->sum_payment,
-                    'total_discount' => (float) 0,
                     'total_tax' => (float) $dateInfo->sum_tax,
                     'transactions' => TransactionResource::collection($dateTransactions)
                 ];
@@ -403,7 +400,7 @@ class TransactionController extends Controller
                 $reason .= 'Refund Transaction #' . $validated['trans_id'];
             }
             // type_reason 0: Produk Return, 1: Misplaced Transaction, 2:Order cancelation, 3: Others
-            if ($validated['type_reason'] && $validated['type_reason'] === '0') {
+            if ($validated['type_reason'] && !in_array($validated['type_reason'], ['1', '2', '3'])) {
                 $reason.= ' (Produk Return)';
             } elseif ($validated['type_reason'] && $validated['type_reason'] === '1') {
                 $reason.= ' (Misplaced Transaction)';
