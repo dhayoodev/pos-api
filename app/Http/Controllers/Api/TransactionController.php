@@ -118,11 +118,11 @@ class TransactionController extends Controller
 
         // Date range filter
         if ($request->has('date_from') && $request->date_from !== '') {
-            $query->whereDate('date', '>=', $request->date_from);
+            $query->whereDate('created_at', '>=', $request->date_from);
         }
 
         if ($request->has('date_to') && $request->date_to !== '') {
-            $query->whereDate('date', '<=', $request->date_to);
+            $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         // Order by latest first
@@ -396,18 +396,38 @@ class TransactionController extends Controller
 
             // Create reason refund
             $reason = "";
-            if ($validated['trans_id']) {
-                $reason .= 'Refund Transaction #' . $validated['trans_id'];
-            }
-            // type_reason 0: Produk Return, 1: Misplaced Transaction, 2:Order cancelation, 3: Others
-            if ($validated['type_reason'] && !in_array($validated['type_reason'], ['1', '2', '3'])) {
-                $reason.= ' (Produk Return)';
-            } elseif ($validated['type_reason'] && $validated['type_reason'] === '1') {
-                $reason.= ' (Misplaced Transaction)';
-            } elseif ($validated['type_reason'] && $validated['type_reason'] === '2') {
-                $reason.= ' (Order cancelation)';
-            } elseif ($validated['type_reason'] && $validated['reason'] && $validated['type_reason'] === '3') {
-                $reason .= ' ('. $validated['reason'] . ')';
+            if ($validated['payment_status'] === 'refunded') {
+                if ($validated['trans_id']) {
+                    $reason .= 'Refund Transaction #' . $validated['trans_id'];
+                }
+                // type_reason 0: Produk Return, 1: Misplaced Transaction, 2:Order cancelation, 3: Others
+                /* if ($validated['type_reason'] && $validated['type_reason'] === '1') {
+                    $reason .= ' (Misplaced Transaction)';
+                } elseif ($validated['type_reason'] && $validated['type_reason'] === '2') {
+                    $reason .= ' (Order cancelation)';
+                } elseif ($validated['type_reason'] && $validated['reason'] && $validated['type_reason'] === '3') {
+                    $reason .= ' ('. $validated['reason'] . ')';
+                } elseif ($validated['type_reason']) {
+                    $reason .= ' (Produk Return)';
+                } */
+
+                switch ($validated['type_reason']) {
+                    case '0':
+                        $reason .= ' (Produk Return)';
+                        break;
+                    case '1':
+                        $reason .= ' (Misplaced Transaction)';
+                        break;
+                    case '2':
+                        $reason .= ' (Order cancelation)';
+                        break;
+                    case '3':
+                        $reason .= ' ('. $validated['reason'] . ')';
+                        break;
+                    default:
+                        $reason .= ' (Produk Return)';
+                        break;
+                }
             }
 
             // Create transaction with updated schema fields

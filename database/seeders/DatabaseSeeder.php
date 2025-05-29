@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
         //$books = ProductCategory::create(['category_name' => 'Books']);
 
         // Create sample products
-        Product::create([
+        /* Product::create([
             'name' => 'iPhone 15 Pro',
             'image' => '',
             'description' => 'Latest iPhone with advanced features',
@@ -58,14 +58,14 @@ class DatabaseSeeder extends Seeder
             'status' => 0,
             'created_by' => $admin->id,
             'created_at' => now()
-        ]);
+        ]); */
 
         // Assuming we already have users and products from previous seeders
-        $admin = User::where('email', 'admin@example.com')->first();
-        $customer = User::where('email', 'cashier@example.com')->first();
+        //$admin = User::where('email', 'admin@example.com')->first();
+        //$customer = User::where('email', 'cashier@example.com')->first();
 
         // Create sample stocks for products
-        StockProduct::create([
+        /* StockProduct::create([
             'product_id' => Product::where('name', 'iPhone 15 Pro')->first()->id,
             'user_id' => $customer->id,
             'quantity' => 10,
@@ -78,29 +78,29 @@ class DatabaseSeeder extends Seeder
             'quantity' => 5,
             'created_by' => $admin->id,
             'created_at' => now()
-        ]);
+        ]); */
 
         // Create sample shift for cashier
-        $shift = Shift::create([
+        /* $shift = Shift::create([
             'user_id' => $customer->id,
             'cash_balance' => 1000.00,
             'expected_cash_balance' => 1000.00,
             'final_cash_balance' => 0.00,
             'created_at' => now(),
             'created_by' => $admin->id
-        ]);
+        ]); */
 
         // Create sample transactions for cashier
-        $commonData = [
+        /* $commonData = [
             'shift_id' => $shift->id,
             'payment_method' => 'cash',
             'total_tax' => 0.00,
             'type_discount' => 0,
             'amount_discount' => 0,
-        ];
+        ]; */
         
         // Create transaction 1 (paid)
-        $transaction1 = Transaction::create(array_merge([
+        /* $transaction1 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now(),
             'total_price' => 70000.00,
@@ -124,10 +124,10 @@ class DatabaseSeeder extends Seeder
             'quantity' => 1,
             'price' => 20000.00,
             'subtotal' => 20000.00,
-        ]);
+        ]); */
         
         // Create transaction 2 (paid)
-        $transaction2 = Transaction::create(array_merge([
+        /* $transaction2 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now()->subDays(2),
             'total_price' => 40000.00,
@@ -143,14 +143,14 @@ class DatabaseSeeder extends Seeder
             'quantity' => 2,
             'price' => 20000.00,
             'subtotal' => 40000.00,
-        ]);
+        ]); */
         
-        $shift->update([
+        /* $shift->update([
             'expected_cash_balance' => $shift->expected_cash_balance + $transaction1->total_price + $transaction2->total_price,
-        ]);
+        ]); */
         
         // Create transaction 3 (failed)
-        $transaction3 = Transaction::create(array_merge([
+        /* $transaction3 = Transaction::create(array_merge([
             'user_id' => $customer->id,
             'date' => now()->subDays(5),
             'total_price' => 50000.00,
@@ -167,6 +167,6 @@ class DatabaseSeeder extends Seeder
             'quantity' => 1,
             'price' => 50000.00,
             'subtotal' => 50000.00,
-        ]);
+        ]); */
     }
 }
