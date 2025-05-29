@@ -30,6 +30,10 @@ Route::group([
     Route::apiResource('products', ProductController::class)->except(['update']);
     Route::post('products/{product}', [ProductController::class, 'update']);
 
+    // Define custom transaction routes before the resource
+    Route::get('transactions/report', [TransactionController::class, 'groupByData']);
+    
+    // Standard transaction resource routes
     Route::apiResource('transactions', TransactionController::class);
 
     Route::apiResource('users', UserController::class);

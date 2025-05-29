@@ -5,16 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TransactionRequest;
 use App\Http\Resources\TransactionResource;
+use App\Models\Product;
+use App\Models\StockProduct;
 use App\Models\Transaction;
-use Illuminate\Http\JsonResponse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Models\Product;
-use App\Models\StockProduct;
 use App\Models\AdjustmentProduct;
-use Illuminate\Support\Carbon;
 
 /**
  * @OA\Tag(
@@ -90,12 +89,6 @@ class TransactionController extends Controller
      *     )
      * )
      */
-    /* public function index()
-    {
-        return TransactionResource::collection(
-            Transaction::with(['user', 'details.product', 'creator'])->get()
-        );
-    } */
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Transaction::query()
@@ -139,6 +132,211 @@ class TransactionController extends Controller
         $transactions = $query->paginate($request->per_page ?? 15);
 
         return TransactionResource::collection($transactions);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/transactions/report",
+     *     summary="List all transactions with filters and pagination grouped by data",
+     *     tags={"Transactions"},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         description="Filter by transaction status",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="user_id",
+     *         in="query",
+     *         description="Filter by user ID",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search in transaction number or customer name",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_from",
+     *         in="query",
+     *         description="Filter transactions from this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_to",
+     *         in="query",
+     *         description="Filter transactions to this date (Y-m-d format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of items per page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transactions grouped by date",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="date", type="string", format="date"),
+     *                 @OA\Property(property="total_transactions", type="integer"),
+     *                 @OA\Property(property="total_amount", type="number", format="float"),
+     *                 @OA\Property(
+     *                     property="transactions",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/Transaction")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function groupByData(Request $request)
+    {
+        // Get pagination parameters
+        $perPage = $request->input('per_page', 15);
+        $page = $request->input('page', 1);
+        
+        // First, get the distinct dates with transaction counts and totals
+        /* $datesQuery = Transaction::query()
+            ->select([
+                DB::raw('DATE(created_at) as trans_date'),
+                DB::raw('COUNT(*) as transaction_count'),
+                DB::raw('SUM(total_price) as sum_price'),
+                DB::raw('SUM(total_payment) as sum_payment'),
+                DB::raw('SUM(total_tax) as sum_tax'),
+            ])
+            ->active()
+            ->groupBy('trans_date')
+            ->orderBy('trans_date', 'desc'); */
+
+        $datesQuery = Transaction::query()
+            ->select([
+                DB::raw('DATE(transactions.created_at) as trans_date'),
+                DB::raw('COUNT(DISTINCT transactions.id) as transaction_count'),
+                DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'paid\' THEN transactions.id END)), 0) as paid_count'),
+                DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.id END)), 0) as refunded_count'),
+                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = \'paid\' THEN transaction_details.subtotal ELSE 0 END), 0) as sum_paid_subtotal'),
+                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = \'refunded\' THEN transaction_details.subtotal ELSE 0 END), 0) as sum_refunded_subtotal'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' THEN transactions.total_price ELSE 0 END) as sum_paid_price'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.total_price ELSE 0 END) as sum_refunded_price'),
+                DB::raw('SUM(DISTINCT transactions.total_payment) as sum_payment'),
+                DB::raw('SUM(DISTINCT transactions.total_tax) as sum_tax')
+            ])
+            ->leftJoin('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+            ->active()
+            ->whereIn('payment_status', ['paid', 'refunded'])
+            ->groupBy('trans_date')
+            ->orderBy('trans_date', 'desc');
+
+        // Apply status filter if specific status is provided
+        if ($request->has('status') && $request->status !== '') {
+            $datesQuery->where('payment_status', $request->status);
+        }
+
+        // Apply user_id filter
+        if ($request->has('user_id') && $request->user_id !== '') {
+            $datesQuery->where('user_id', $request->user_id);
+        }
+
+        // Apply date range filter if needed
+        /* if ($request->has('date_from') && $request->date_from !== '') {
+            $datesQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $datesQuery->whereDate('created_at', '<=', $request->date_to);
+        } */
+
+        // Get paginated dates
+        $dates = $datesQuery->paginate($perPage, ['*'], 'page', $page);
+
+        // If no dates found, return empty paginated response
+        if ($dates->isEmpty()) {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'current_page' => $page,
+                    'from' => null,
+                    'last_page' => 1,
+                    'per_page' => $perPage,
+                    'to' => null,
+                    'total' => 0
+                ]
+            ]);
+        }
+
+        // Get all dates for the current page
+        $dateValues = $dates->pluck('trans_date');
+
+        // Get transactions for these dates
+        $transactions = Transaction::query()
+            ->with(['user', 'details.product'])
+            ->select([
+                'transactions.*',
+                DB::raw('(SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal'),
+                DB::raw('DATE(transactions.created_at) as transaction_date')
+            ])
+            ->whereIn(DB::raw('DATE(created_at)'), $dateValues)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Group transactions by date and format the response
+        $groupedTransactions = $transactions->groupBy('transaction_date')
+            ->map(function ($dateTransactions, $date) use ($dates) {
+                $dateInfo = $dates->firstWhere('trans_date', $date);
+                
+                return [
+                    'date' => $date,
+                    'total_transactions' => $dateInfo->transaction_count,
+                    'paid_transactions' => (int) $dateInfo->paid_count,
+                    'refunded_transactions' => (int) $dateInfo->refunded_count,
+                    'paid' => [
+                        'subtotal' => (float) $dateInfo->sum_paid_subtotal,
+                        'total' => (float) $dateInfo->sum_paid_price,
+                    ],
+                    'refunded' => [
+                        'subtotal' => (float) $dateInfo->sum_refunded_subtotal,
+                        'total' => (float) $dateInfo->sum_refunded_price,
+                    ],
+                    'total_payment' => (float) $dateInfo->sum_payment,
+                    'total_discount' => (float) 0,
+                    'total_tax' => (float) $dateInfo->sum_tax,
+                    'transactions' => TransactionResource::collection($dateTransactions)
+                ];
+            })
+            ->sortByDesc('date')
+            ->values();
+
+        // Create paginated response
+        return response()->json([
+            'data' => $groupedTransactions,
+            'meta' => [
+                'current_page' => $dates->currentPage(),
+                'from' => $dates->firstItem(),
+                'last_page' => $dates->lastPage(),
+                'per_page' => $dates->perPage(),
+                'to' => $dates->lastItem(),
+                'total' => $dates->total()
+            ]
+        ]);
     }
 
     /**
