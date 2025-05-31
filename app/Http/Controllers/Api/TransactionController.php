@@ -494,8 +494,9 @@ class TransactionController extends Controller
 
             // Adjustment shift expected cash balance
             $shift = $transaction->shift;
+            $totalChange = $transaction->total_price - $transaction->total_payment;
             if ($transaction->payment_status === 'paid' && $transaction->payment_method === 'cash') {
-                $shift->update(['expected_cash_balance' => $shift->expected_cash_balance + $transaction->total_payment]);
+                $shift->update(['expected_cash_balance' => $shift->expected_cash_balance + $transaction->total_payment + $totalChange]);
             } elseif ($transaction->payment_status === 'refunded' && $transaction->payment_method === 'cash') {
                 $shift->update(['expected_cash_balance' => $shift->expected_cash_balance - $transaction->total_payment]);
             }
