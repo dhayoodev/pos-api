@@ -140,9 +140,16 @@ class TransactionController extends Controller
      *     summary="List all transactions with filters and pagination grouped by data",
      *     tags={"Transactions"},
      *     @OA\Parameter(
-     *         name="status",
+     *         name="group_by",
      *         in="query",
-     *         description="Filter by transaction status",
+     *         description="Group by day or month",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="year",
+     *         in="query",
+     *         description="Filter by year",
      *         required=false,
      *         @OA\Schema(type="string")
      *     ),
@@ -152,13 +159,6 @@ class TransactionController extends Controller
      *         description="Filter by user ID",
      *         required=false,
      *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Parameter(
-     *         name="search",
-     *         in="query",
-     *         description="Search in transaction number or customer name",
-     *         required=false,
-     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
      *         name="date_from",
@@ -213,11 +213,15 @@ class TransactionController extends Controller
         // Get pagination parameters
         $perPage = $request->input('per_page', 15);
         $page = $request->input('page', 1);
+        $groupBy = $request->input('group_by', 'day'); // 'day' or 'month'
+        $year = $request->input('year', date('Y'));
         
         // First, get the distinct dates with transaction data
         $datesQuery = Transaction::query()
             ->select([
-                DB::raw('DATE(transactions.created_at) as trans_date'),
+                $groupBy === 'month' 
+                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as trans_date')
+                    : DB::raw('DATE(transactions.created_at) as trans_date'),
                 DB::raw('COUNT(DISTINCT transactions.id) as transaction_count'),
                 DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'paid\' THEN transactions.id END)), 0) as paid_count'),
                 DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.id END)), 0) as refunded_count'),
@@ -244,9 +248,18 @@ class TransactionController extends Controller
             ])
             ->leftJoin('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
             ->active()
-            ->whereIn('payment_status', ['paid', 'refunded'])
-            ->groupBy('trans_date')
-            ->orderBy('trans_date', 'desc');
+            ->whereIn('payment_status', ['paid', 'refunded']);
+            
+        // Group by the appropriate date part and ensure compatibility with ONLY_FULL_GROUP_BY
+        if ($groupBy === 'month') {
+            $datesQuery->whereYear('created_at', $year);
+            $datesQuery->groupBy(DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01")'));
+        } else {
+            $datesQuery->groupBy(DB::raw('DATE(transactions.created_at)'));
+        }
+        
+        // Order by date
+        $datesQuery->orderBy('trans_date', 'desc');
 
         // Apply user_id filter
         if ($request->has('user_id') && $request->user_id !== '') {
@@ -289,11 +302,25 @@ class TransactionController extends Controller
             ->select([
                 'transactions.*',
                 DB::raw('(SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal'),
-                DB::raw('DATE(transactions.created_at) as transaction_date')
-            ])
-            ->whereIn(DB::raw('DATE(created_at)'), $dateValues)
-            ->orderBy('created_at', 'desc')
-            ->get();
+                $groupBy === 'month' 
+                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as transaction_date')
+                    : DB::raw('DATE(transactions.created_at) as transaction_date')
+            ]);
+            
+        // Apply the appropriate where condition based on grouping type
+        if ($groupBy === 'month') {
+            $transactions->whereYear('created_at', $year);
+            $transactions->where(function($query) use ($dateValues) {
+                foreach ($dateValues as $date) {
+                    $query->orWhereRaw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") = ?', [$date]);
+                }
+            });
+        } else {
+            $transactions->whereIn(DB::raw('DATE(transactions.created_at)'), $dateValues);
+        }
+        
+        // Order by date
+        $transactions = $transactions->orderBy('created_at', 'desc')->get();
 
         // Group transactions by date and format the response
         $groupedTransactions = $transactions->groupBy('transaction_date')

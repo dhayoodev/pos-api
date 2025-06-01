@@ -1822,9 +1822,18 @@
                 "operationId": "26c3c8a48e7d27485bb5bd51b0f5e00d",
                 "parameters": [
                     {
-                        "name": "status",
+                        "name": "group_by",
                         "in": "query",
-                        "description": "Filter by transaction status",
+                        "description": "Group by day or month",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "Filter by year",
                         "required": false,
                         "schema": {
                             "type": "string"
@@ -1837,15 +1846,6 @@
                         "required": false,
                         "schema": {
                             "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "in": "query",
-                        "description": "Search in transaction number or customer name",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     },
                     {
