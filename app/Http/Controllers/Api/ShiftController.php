@@ -313,6 +313,7 @@ class ShiftController extends Controller
 
         $cashChanges = (float) $cashPayments->sum('total_payment') - $cashPayments->sum('total_price');
         $expectedCash = (float) $shift->cash_balance + $paidIn - $paidOut + $cashPayments->sum('total_payment') - $cashChanges - $cashRefunds;
+        $cashTotal = $cashPayments->sum('total_payment') - $cashRefunds;
 
         // Calculate gross sales (sum of subtotal from transaction_details)
         $grossSales = Transaction::where('transactions.shift_id', $shift->id)
@@ -365,6 +366,48 @@ class ShiftController extends Controller
             ->orderBy('created_at', 'desc')
             ->sum('total_tax');
 
+        // Calculate bank transfer payments
+        $bankTransferPayments = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'bank_transfer')
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_payment');
+        $bankTransferRefunds = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'bank_transfer')
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+        
+        $bankTransferTotal = $bankTransferPayments - $bankTransferRefunds;
+        
+        // Calculate e-wallet payments
+        $ewalletPayments = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'e_wallet')
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_payment');
+        $ewalletRefunds = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'e_wallet')
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+        
+        $ewalletTotal = $ewalletPayments - $ewalletRefunds;
+
+        // Calculate qris payments
+        $qrisPayments = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'qris')
+            ->where('payment_status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_payment');
+        $qrisRefunds = Transaction::where('shift_id', $shift->id)
+            ->where('payment_method', 'qris')
+            ->where('payment_status', 'refunded')
+            ->orderBy('created_at', 'desc')
+            ->sum('total_price');
+        
+        $qrisTotal = $qrisPayments - $qrisRefunds;
+
         $array = [
             'cash_payments' => (float) $cashPayments->sum('total_payment'),
             'cash_refunds' => (float) $cashRefunds,
@@ -377,6 +420,11 @@ class ShiftController extends Controller
             'discounts' => (float) $discountSales - $discountRefund,
             'net_sales' => $netSales,
             'tax_sales' => (float) $taxSales - $taxRefund,
+            'total_tendered' => (float) $cashTotal + $bankTransferTotal + $ewalletTotal + $qrisTotal,
+            'bank_transfer_total' => (float) $bankTransferTotal,
+            'ewallet_total' => (float) $ewalletTotal,
+            'qris_total' => (float) $qrisTotal,
+            'cash_total' => (float) $cashTotal,
         ];
 
         return response()->json([

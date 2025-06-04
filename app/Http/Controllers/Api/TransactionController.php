@@ -36,6 +36,13 @@ class TransactionController extends Controller
      *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
+     *         name="payment_method",
+     *         in="query",
+     *         description="Filter by transaction payment_method",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
      *         name="user_id",
      *         in="query",
      *         description="Filter by user ID",
@@ -104,6 +111,11 @@ class TransactionController extends Controller
         // Filter by user_id
         if ($request->has('user_id') && $request->user_id !== '') {
             $query->where('user_id', $request->user_id);
+        }
+
+        // Filter by payment_method
+        if ($request->has('payment_method') && $request->payment_method !== '') {
+            $query->where('payment_method', $request->payment_method);
         }
 
         // Search functionality
@@ -229,6 +241,14 @@ class TransactionController extends Controller
                 DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = \'refunded\' THEN transaction_details.subtotal ELSE 0 END), 0) as sum_refunded_subtotal'),
                 DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' THEN transactions.total_price ELSE 0 END) as sum_paid_price'),
                 DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.total_price ELSE 0 END) as sum_refunded_price'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'cash\' THEN transactions.total_payment ELSE 0 END) as sum_cash_payment'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'bank_transfer\' THEN transactions.total_payment ELSE 0 END) as sum_bank_transfer_payment'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'ewallet\' THEN transactions.total_payment ELSE 0 END) as sum_ewallet_payment'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'qris\' THEN transactions.total_payment ELSE 0 END) as sum_qris_payment'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'cash\' THEN transactions.total_price ELSE 0 END) as sum_cash_refunded'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'bank_transfer\' THEN transactions.total_price ELSE 0 END) as sum_bank_transfer_refunded'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'ewallet\' THEN transactions.total_price ELSE 0 END) as sum_ewallet_refunded'),
+                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'qris\' THEN transactions.total_price ELSE 0 END) as sum_qris_refunded'),
                 DB::raw('SUM(DISTINCT transactions.total_payment) as sum_payment'),
                 DB::raw('SUM(DISTINCT transactions.total_tax) as sum_tax'),
                 DB::raw('COALESCE(SUM(CASE 
@@ -326,6 +346,8 @@ class TransactionController extends Controller
         $groupedTransactions = $transactions->groupBy('transaction_date')
             ->map(function ($dateTransactions, $date) use ($dates) {
                 $dateInfo = $dates->firstWhere('trans_date', $date);
+                //$totalTendered = $dateInfo->sum_cash_payment + $dateInfo->sum_bank_transfer_payment + $dateInfo->sum_ewallet_payment + $dateInfo->sum_qris_payment;
+                //$totalRefunded = $dateInfo->sum_cash_refunded + $dateInfo->sum_bank_transfer_refunded + $dateInfo->sum_ewallet_refunded + $dateInfo->sum_qris_refunded;
                 
                 return [
                     'date' => $date,
@@ -336,12 +358,21 @@ class TransactionController extends Controller
                         'subtotal' => (float) $dateInfo->sum_paid_subtotal,
                         'total' => (float) $dateInfo->sum_paid_price,
                         'discount' => (float) $dateInfo->sum_paid_discount,
+                        'cash' => (float) $dateInfo->sum_cash_payment,
+                        'bank_transfer' => (float) $dateInfo->sum_bank_transfer_payment,
+                        'ewallet' => (float) $dateInfo->sum_ewallet_payment,
+                        'qris' => (float) $dateInfo->sum_qris_payment,
                     ],
                     'refunded' => [
                         'subtotal' => (float) $dateInfo->sum_refunded_subtotal,
                         'total' => (float) $dateInfo->sum_refunded_price,
                         'discount' => (float) $dateInfo->sum_refunded_discount,
+                        'cash' => (float) $dateInfo->sum_cash_refunded,
+                        'bank_transfer' => (float) $dateInfo->sum_bank_transfer_refunded,
+                        'ewallet' => (float) $dateInfo->sum_ewallet_refunded,
+                        'qris' => (float) $dateInfo->sum_qris_refunded,
                     ],
+                    //'total_tendered' => (float) $totalTendered - (float) $totalRefunded,
                     'total_tax' => (float) $dateInfo->sum_tax,
                     'transactions' => TransactionResource::collection($dateTransactions)
                 ];
