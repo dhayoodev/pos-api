@@ -33,3 +33,4 @@ app/Http/.DS_Store
 database/.DS_Store
 docker/.DS_Store
 storage/.DS_Store
+.DS_Store
