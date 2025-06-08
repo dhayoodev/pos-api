@@ -1690,6 +1690,15 @@
                         }
                     },
                     {
+                        "name": "payment_method",
+                        "in": "query",
+                        "description": "Filter by transaction payment_method",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "user_id",
                         "in": "query",
                         "description": "Filter by user ID",
