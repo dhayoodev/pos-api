@@ -227,231 +227,132 @@ class TransactionController extends Controller
         $page = $request->input('page', 1);
         $groupBy = $request->input('group_by', 'day'); // 'day' or 'month'
         $year = $request->input('year', date('Y'));
-        
-        // First, get the distinct dates with transaction data
-        $datesQuery = Transaction::query()
-            ->select([
-                $groupBy === 'month' 
-                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as trans_date')
-                    : DB::raw('DATE(transactions.created_at) as trans_date'),
-                DB::raw('COUNT(DISTINCT transactions.id) as transaction_count'),
-                DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'paid\' THEN transactions.id END)), 0) as paid_count'),
-                DB::raw('COALESCE(COUNT(DISTINCT(CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.id END)), 0) as refunded_count'),
-                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = \'paid\' THEN transaction_details.subtotal ELSE 0 END), 0) as sum_paid_subtotal'),
-                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = \'refunded\' THEN transaction_details.subtotal ELSE 0 END), 0) as sum_refunded_subtotal'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' THEN transactions.total_price ELSE 0 END) as sum_paid_price'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' THEN transactions.total_price ELSE 0 END) as sum_refunded_price'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'cash\' THEN transactions.total_payment ELSE 0 END) as sum_cash_payment'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'bank_transfer\' THEN transactions.total_payment ELSE 0 END) as sum_bank_transfer_payment'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'ewallet\' THEN transactions.total_payment ELSE 0 END) as sum_ewallet_payment'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'paid\' AND transactions.payment_method = \'qris\' THEN transactions.total_payment ELSE 0 END) as sum_qris_payment'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'cash\' THEN transactions.total_price ELSE 0 END) as sum_cash_refunded'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'bank_transfer\' THEN transactions.total_price ELSE 0 END) as sum_bank_transfer_refunded'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'ewallet\' THEN transactions.total_price ELSE 0 END) as sum_ewallet_refunded'),
-                DB::raw('SUM(DISTINCT CASE WHEN transactions.payment_status = \'refunded\' AND transactions.payment_method = \'qris\' THEN transactions.total_price ELSE 0 END) as sum_qris_refunded'),
-                DB::raw('SUM(DISTINCT transactions.total_payment) as sum_payment'),
-                DB::raw('SUM(DISTINCT transactions.total_tax) as sum_tax'),
-                DB::raw('COALESCE(SUM(CASE 
-                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 1 AND transactions.payment_status = \'paid\'
-                    THEN transactions.amount_discount 
-                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = \'paid\'
-                    THEN (transaction_details.subtotal * transactions.amount_discount / 100)
-                    ELSE 0 
-                END), 0) as sum_paid_discount'),
-                DB::raw('COALESCE(SUM(CASE 
-                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 1 AND transactions.payment_status = \'refunded\'
-                    THEN transactions.amount_discount 
-                    WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = \'refunded\'
-                    THEN (transaction_details.subtotal * transactions.amount_discount / 100)
-                    ELSE 0 
-                END), 0) as sum_refunded_discount')
-            ])
-            ->leftJoin('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+
+        // Base query for transactions with filters
+        $baseQuery = Transaction::query()
             ->active()
-            ->whereIn('payment_status', ['paid', 'refunded']);
-            
-        // Group by the appropriate date part and ensure compatibility with ONLY_FULL_GROUP_BY
-        if ($groupBy === 'month') {
-            $datesQuery->whereYear('created_at', $year);
-            $datesQuery->groupBy(DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01")'));
-        } else {
-            $datesQuery->groupBy(DB::raw('DATE(transactions.created_at)'));
-        }
-        
-        // Order by date
-        $datesQuery->orderBy('trans_date', 'desc');
-
-        // Apply user_id filter
-        if ($request->has('user_id') && $request->user_id !== '') {
-            $datesQuery->where('user_id', $request->user_id);
-        }
-
-        // Apply date range filter if needed
-        if ($request->has('date_from') && $request->date_from !== '') {
-            $datesQuery->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->has('date_to') && $request->date_to !== '') {
-            $datesQuery->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Get paginated dates
-        $dates = $datesQuery->paginate($perPage, ['*'], 'page', $page);
-
-        // If no dates found, return empty paginated response
-        if ($dates->isEmpty()) {
-            return response()->json([
-                'data' => [],
-                'meta' => [
-                    'current_page' => $page,
-                    'from' => null,
-                    'last_page' => 1,
-                    'per_page' => $perPage,
-                    'to' => null,
-                    'total' => 0
-                ]
-            ]);
-        }
-
-        // Get all dates for the current page
-        $dateValues = $dates->pluck('trans_date');
-
-        // Get transactions for these dates
-        $transactions = Transaction::query()
-            ->with(['user', 'details.product'])
-            ->select([
-                'transactions.*',
-                DB::raw('(SELECT SUM(subtotal) FROM transaction_details WHERE transaction_details.trans_id = transactions.id) as total_subtotal'),
-                $groupBy === 'month' 
-                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as transaction_date')
-                    : DB::raw('DATE(transactions.created_at) as transaction_date')
-            ]);
-            
-        // Apply the appropriate where condition based on grouping type
-        if ($groupBy === 'month') {
-            $transactions->whereYear('created_at', $year);
-            $transactions->where(function($query) use ($dateValues) {
-                foreach ($dateValues as $date) {
-                    $query->orWhereRaw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") = ?', [$date]);
-                }
-            });
-        } else {
-            $transactions->whereIn(DB::raw('DATE(transactions.created_at)'), $dateValues);
-        }
-        
-        // Order by date
-        $transactions = $transactions->orderBy('created_at', 'desc')->get();
-
-        // Add this select after the existing ones in the $datesQuery
-        $productSalesQuery = Transaction::query()
-            ->select([
-                $groupBy === 'month' 
-                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as trans_date')
-                    : DB::raw('DATE(transactions.created_at) as trans_date'),
-                'transaction_details.product_id',
-                'products.name as product_name',
-                'products.price',
-                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.quantity ELSE 0 END), 0) as sold_quantity'),
-                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.quantity ELSE 0 END), 0) as refunded_quantity'),
-                DB::raw('COALESCE(SUM(CASE 
-                    WHEN transactions.payment_status = "paid" THEN transaction_details.subtotal 
-                    WHEN transactions.payment_status = "refunded" THEN -transaction_details.subtotal 
-                    ELSE 0 
-                END), 0) as net_sales')
-            ])
-            ->join('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
-            ->join('products', 'transaction_details.product_id', '=', 'products.id')
-            ->whereIn('transactions.payment_status', ['paid', 'refunded'])
-            ->groupBy(
-                $groupBy === 'month' 
-                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01")')
-                    : DB::raw('DATE(transactions.created_at)'),
-                'transaction_details.product_id',
-                'products.name',
-                'products.price'
-            );
-
-        // Apply the same filters as the main query
-        if ($groupBy === 'month') {
-            $productSalesQuery->whereYear('transactions.created_at', $year);
-        }
-
-        if ($request->has('user_id') && $request->user_id !== '') {
-            $productSalesQuery->where('transactions.user_id', $request->user_id);
-        }
-
-        if ($request->has('date_from') && $request->date_from !== '') {
-            $productSalesQuery->whereDate('transactions.created_at', '>=', $request->date_from);
-        }
-
-        if ($request->has('date_to') && $request->date_to !== '') {
-            $productSalesQuery->whereDate('transactions.created_at', '<=', $request->date_to);
-        }
-
-        // Get the product sales data
-        $productSales = $productSalesQuery->get()
-            ->groupBy('trans_date')
-            ->map(function ($products) {
-                return $products->map(function ($product) {
-                    return [
-                        'id' => $product->product_id,
-                        'name' => $product->product_name,
-                        'price' => (float) $product->price,
-                        'sold_quantity' => (int) $product->sold_quantity,
-                        'refunded_quantity' => (int) $product->refunded_quantity,
-                        'total_sales' => (float) $product->net_sales
-                    ];
-                })->sortByDesc('total_sales')->values();
-            });
-
-        // Then, group transactions by date and in your response mapping, add the products to each date:
-        $groupedTransactions = $transactions->groupBy('transaction_date')
-            ->map(function ($dateTransactions, $date) use ($dates, $productSales) {
-                $dateInfo = $dates->firstWhere('trans_date', $date);
-                //$totalTendered = $dateInfo->sum_cash_payment + $dateInfo->sum_bank_transfer_payment + $dateInfo->sum_ewallet_payment + $dateInfo->sum_qris_payment;
-                //$totalRefunded = $dateInfo->sum_cash_refunded + $dateInfo->sum_bank_transfer_refunded + $dateInfo->sum_ewallet_refunded + $dateInfo->sum_qris_refunded;
-                
-                return [
-                    'date' => $date,
-                    'total_transactions' => $dateInfo->transaction_count,
-                    'paid_transactions' => (int) $dateInfo->paid_count,
-                    'refunded_transactions' => (int) $dateInfo->refunded_count,
-                    'paid' => [
-                        'subtotal' => (float) $dateInfo->sum_paid_subtotal,
-                        'total' => (float) $dateInfo->sum_paid_price,
-                        'discount' => (float) $dateInfo->sum_paid_discount,
-                        'cash' => (float) $dateInfo->sum_cash_payment,
-                        'bank_transfer' => (float) $dateInfo->sum_bank_transfer_payment,
-                        'ewallet' => (float) $dateInfo->sum_ewallet_payment,
-                        'qris' => (float) $dateInfo->sum_qris_payment,
-                    ],
-                    'refunded' => [
-                        'subtotal' => (float) $dateInfo->sum_refunded_subtotal,
-                        'total' => (float) $dateInfo->sum_refunded_price,
-                        'discount' => (float) $dateInfo->sum_refunded_discount,
-                        'cash' => (float) $dateInfo->sum_cash_refunded,
-                        'bank_transfer' => (float) $dateInfo->sum_bank_transfer_refunded,
-                        'ewallet' => (float) $dateInfo->sum_ewallet_refunded,
-                        'qris' => (float) $dateInfo->sum_qris_refunded,
-                    ],
-                    'total_tax' => (float) $dateInfo->sum_tax,
-                    'products' => $productSales->get($date, collect()),
-                    'transactions' => TransactionResource::collection($dateTransactions)
-                ];
+            ->whereIn('payment_status', ['paid', 'refunded'])
+            ->when($request->has('user_id') && $request->user_id !== '', function ($q) use ($request) {
+                $q->where('user_id', $request->user_id);
             })
-            ->sortByDesc('date')
-            ->values();
+            ->when($request->has('date_from') && $request->date_from !== '', function ($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from);
+            })
+            ->when($request->has('date_to') && $request->date_to !== '', function ($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to);
+            });
 
-        // Create paginated response
+        if ($groupBy === 'month') {
+            $baseQuery->whereYear('created_at', $year);
+        }
+
+        // --- Transaction-level aggregates ---
+        $transactionAggregatesQuery = (clone $baseQuery)
+            ->selectRaw(
+                ($groupBy === 'month' ? 'DATE_FORMAT(created_at, "%Y-%m-01")' : 'DATE(created_at)') . ' as trans_date, 
+                COUNT(id) as transaction_count,
+                SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN payment_status = "refunded" THEN 1 ELSE 0 END) as refunded_count,
+                SUM(CASE WHEN payment_status = "paid" THEN total_price ELSE 0 END) as sum_paid_price,
+                SUM(CASE WHEN payment_status = "refunded" THEN total_price ELSE 0 END) as sum_refunded_price,
+                SUM(CASE WHEN payment_status = "paid" AND payment_method = "cash" THEN total_payment ELSE 0 END) as sum_cash_payment,
+                SUM(CASE WHEN payment_status = "paid" AND payment_method = "bank_transfer" THEN total_payment ELSE 0 END) as sum_bank_transfer_payment,
+                SUM(CASE WHEN payment_status = "paid" AND payment_method = "ewallet" THEN total_payment ELSE 0 END) as sum_ewallet_payment,
+                SUM(CASE WHEN payment_status = "paid" AND payment_method = "qris" THEN total_payment ELSE 0 END) as sum_qris_payment,
+                SUM(CASE WHEN payment_status = "refunded" AND payment_method = "cash" THEN total_price ELSE 0 END) as sum_cash_refunded,
+                SUM(CASE WHEN payment_status = "refunded" AND payment_method = "bank_transfer" THEN total_price ELSE 0 END) as sum_bank_transfer_refunded,
+                SUM(CASE WHEN payment_status = "refunded" AND payment_method = "ewallet" THEN total_price ELSE 0 END) as sum_ewallet_refunded,
+                SUM(CASE WHEN payment_status = "refunded" AND payment_method = "qris" THEN total_price ELSE 0 END) as sum_qris_refunded,
+                SUM(total_payment) as sum_payment,
+                SUM(total_tax) as sum_tax,
+                SUM(CASE WHEN discount_id IS NOT NULL AND type_discount = 1 AND payment_status = "paid" THEN amount_discount ELSE 0 END) as sum_paid_discount_fixed,
+                SUM(CASE WHEN discount_id IS NOT NULL AND type_discount = 1 AND payment_status = "refunded" THEN amount_discount ELSE 0 END) as sum_refunded_discount_fixed'
+            )
+            ->groupBy('trans_date');
+
+        // --- Detail-level aggregates ---
+        $detailAggregatesQuery = (clone $baseQuery)
+            ->join('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+            ->selectRaw(
+                ($groupBy === 'month' ? 'DATE_FORMAT(transactions.created_at, "%Y-%m-01")' : 'DATE(transactions.created_at)') . ' as trans_date,
+                SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.subtotal ELSE 0 END) as sum_paid_subtotal,
+                SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.subtotal ELSE 0 END) as sum_refunded_subtotal,
+                SUM(CASE WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = "paid" THEN (transaction_details.subtotal * transactions.amount_discount / 100) ELSE 0 END) as sum_paid_discount_percentage,
+                SUM(CASE WHEN transactions.discount_id IS NOT NULL AND transactions.type_discount = 2 AND transactions.payment_status = "refunded" THEN (transaction_details.subtotal * transactions.amount_discount / 100) ELSE 0 END) as sum_refunded_discount_percentage'
+            )
+            ->groupBy('trans_date');
+
+        // --- Combine aggregates ---
+        $transactionSql = $transactionAggregatesQuery->toSql();
+        $detailSql = $detailAggregatesQuery->toSql();
+        
+        // Create a new query builder
+        $datesQuery = DB::table(DB::raw("($transactionSql) as t_agg"))
+            ->leftJoin(
+                DB::raw("($detailSql) as d_agg"), 
+                't_agg.trans_date', 
+                '=', 
+                'd_agg.trans_date'
+            )
+            ->selectRaw('t_agg.*, 
+                         COALESCE(d_agg.sum_paid_subtotal, 0) as sum_paid_subtotal,
+                         COALESCE(d_agg.sum_refunded_subtotal, 0) as sum_refunded_subtotal,
+                         (t_agg.sum_paid_discount_fixed + COALESCE(d_agg.sum_paid_discount_percentage, 0)) as sum_paid_discount,
+                         (t_agg.sum_refunded_discount_fixed + COALESCE(d_agg.sum_refunded_discount_percentage, 0)) as sum_refunded_discount'
+            );
+            
+        // Manually add all bindings in the correct order
+        $bindings = array_merge(
+            $transactionAggregatesQuery->getBindings(),
+            $detailAggregatesQuery->getBindings()
+        );
+        
+        // Apply all bindings to the query
+        foreach ($bindings as $binding) {
+            $datesQuery->addBinding($binding);
+        }
+
+        // First, get all the results
+        $results = $datesQuery->get();
+        
+        // Then calculate the grand totals manually
+        $grandTotals = (object)[
+            'transaction_count' => $results->sum('transaction_count'),
+            'paid_count' => $results->sum('paid_count'),
+            'refunded_count' => $results->sum('refunded_count'),
+            'sum_paid_subtotal' => $results->sum('sum_paid_subtotal'),
+            'sum_refunded_subtotal' => $results->sum('sum_refunded_subtotal'),
+            'sum_paid_price' => $results->sum('sum_paid_price'),
+            'sum_refunded_price' => $results->sum('sum_refunded_price'),
+            'sum_cash_payment' => $results->sum('sum_cash_payment'),
+            'sum_bank_transfer_payment' => $results->sum('sum_bank_transfer_payment'),
+            'sum_ewallet_payment' => $results->sum('sum_ewallet_payment'),
+            'sum_qris_payment' => $results->sum('sum_qris_payment'),
+            'sum_cash_refunded' => $results->sum('sum_cash_refunded'),
+            'sum_bank_transfer_refunded' => $results->sum('sum_bank_transfer_refunded'),
+            'sum_ewallet_refunded' => $results->sum('sum_ewallet_refunded'),
+            'sum_qris_refunded' => $results->sum('sum_qris_refunded'),
+            'sum_payment' => $results->sum('sum_payment'),
+            'sum_tax' => $results->sum('sum_tax'),
+            'sum_paid_discount' => $results->sum('sum_paid_discount'),
+            'sum_refunded_discount' => $results->sum('sum_refunded_discount'),
+        ];
+
+        // Paginate the results
+        $results = $datesQuery
+            ->orderBy('t_agg.trans_date', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
         return response()->json([
-            'data' => $groupedTransactions,
+            'data' => $results->items(),
+            'totals' => $grandTotals,
             'meta' => [
-                'current_page' => $dates->currentPage(),
-                'from' => $dates->firstItem(),
-                'last_page' => $dates->lastPage(),
-                'per_page' => $dates->perPage(),
-                'to' => $dates->lastItem(),
-                'total' => $dates->total()
+                'total' => $results->total(),
+                'per_page' => $results->perPage(),
+                'current_page' => $results->currentPage(),
+                'last_page' => $results->lastPage(),
+                'from' => $results->firstItem(),
+                'to' => $results->lastItem(),
             ]
         ]);
     }
