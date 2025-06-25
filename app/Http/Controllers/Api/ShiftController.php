@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Shift;
 use App\Models\ShiftHistory;
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -84,34 +85,70 @@ class ShiftController extends Controller
     } */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Shift::query()->active()->with(['user', 'histories']);
+        // First, get the shifts with basic relations
+        $shifts = Shift::with(['user', 'histories'])
+            ->when($request->has('status') && $request->status !== '', function($q) use ($request) {
+                $q->where('payment_status', $request->status);
+            })
+            ->when($request->has('user_id') && $request->user_id !== '', function($q) use ($request) {
+                $q->where('user_id', $request->user_id);
+            })
+            ->when($request->has('date_from') && $request->date_from !== '', function($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->date_from);
+            })
+            ->when($request->has('date_to') && $request->date_to !== '', function($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->date_to);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->per_page ?? 15);
 
-        // Filter by status
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('payment_status', $request->status);
-        }
+        // Get the shift IDs
+        $shiftIds = $shifts->pluck('id')->toArray();
 
-        // Filter by user_id
-        if ($request->has('user_id') && $request->user_id !== '') {
-            $query->where('user_id', $request->user_id);
-        }
+        // Get product sales for these shifts
+        $productSales = DB::table('transactions')
+            ->select(
+                'transactions.shift_id',
+                'transaction_details.product_id',
+                'products.name as product_name',
+                'products.price',
+                DB::raw('SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.quantity ELSE 0 END) as sold_quantity'),
+                DB::raw('SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.quantity ELSE 0 END) as refunded_quantity'),
+                DB::raw('SUM(CASE 
+                    WHEN transactions.payment_status = "paid" THEN transaction_details.subtotal 
+                    WHEN transactions.payment_status = "refunded" THEN -transaction_details.subtotal 
+                    ELSE 0 
+                END) as net_sales')
+            )
+            ->join('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+            ->join('products', 'transaction_details.product_id', '=', 'products.id')
+            ->whereIn('transactions.shift_id', $shiftIds)
+            ->whereIn('transactions.payment_status', ['paid', 'refunded'])
+            ->groupBy(
+                'transactions.shift_id',
+                'transaction_details.product_id',
+                'products.name',
+                'products.price'
+            )
+            ->get()
+            ->groupBy('shift_id');
 
-        // Date range filter
-        if ($request->has('date_from') && $request->date_from !== '') {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
+        // Map the product sales to each shift
+        $shifts->getCollection()->transform(function ($shift) use ($productSales) {
+            $shift->products = $productSales->get($shift->id, collect())->map(function ($item) {
+                return [
+                    'id' => $item->product_id,
+                    'name' => $item->product_name,
+                    'price' => $item->price,
+                    'sold_quantity' => $item->sold_quantity,
+                    'refunded_quantity' => $item->refunded_quantity,
+                    'total_sales' => $item->net_sales
+                ];
+            })->values();
+            return $shift;
+        });
 
-        if ($request->has('date_to') && $request->date_to !== '') {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Order by latest first
-        $query->orderBy('created_at', 'desc');
-
-        // Pagination
-        $shift = $query->paginate($request->per_page ?? 15);
-
-        return ShiftResource::collection($shift);
+        return ShiftResource::collection($shifts);
     }
 
     /**
@@ -408,6 +445,28 @@ class ShiftController extends Controller
         
         $qrisTotal = $qrisPayments - $qrisRefunds;
 
+        // List transactions products
+        $products = TransactionDetail::select(
+                'products.id',
+                'products.name',
+                'products.price',
+                \DB::raw('SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.quantity ELSE 0 END) as sold_quantity'),
+                \DB::raw('SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.quantity ELSE 0 END) as refunded_quantity'),
+                \DB::raw('SUM(CASE 
+                    WHEN transactions.payment_status = "paid" THEN transaction_details.subtotal 
+                    WHEN transactions.payment_status = "refunded" THEN -transaction_details.subtotal 
+                    ELSE 0 
+                END) as total_sales')
+            )
+            ->join('transactions', 'transaction_details.trans_id', '=', 'transactions.id')
+            ->join('products', 'transaction_details.product_id', '=', 'products.id')
+            ->where('transactions.shift_id', $shift->id)
+            ->whereIn('transactions.payment_status', ['paid', 'refunded'])
+            ->groupBy('products.id', 'products.name', 'products.price')
+            ->orderBy('total_sales', 'desc')
+            ->get();
+        
+
         $array = [
             'cash_payments' => (float) $cashPayments->sum('total_payment'),
             'cash_refunds' => (float) $cashRefunds,
@@ -425,6 +484,7 @@ class ShiftController extends Controller
             'ewallet_total' => (float) $ewalletTotal,
             'qris_total' => (float) $qrisTotal,
             'cash_total' => (float) $cashTotal,
+            'products' => $products,
         ];
 
         return response()->json([

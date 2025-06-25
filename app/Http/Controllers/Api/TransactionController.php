@@ -342,9 +342,71 @@ class TransactionController extends Controller
         // Order by date
         $transactions = $transactions->orderBy('created_at', 'desc')->get();
 
-        // Group transactions by date and format the response
+        // Add this select after the existing ones in the $datesQuery
+        $productSalesQuery = Transaction::query()
+            ->select([
+                $groupBy === 'month' 
+                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01") as trans_date')
+                    : DB::raw('DATE(transactions.created_at) as trans_date'),
+                'transaction_details.product_id',
+                'products.name as product_name',
+                'products.price',
+                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.quantity ELSE 0 END), 0) as sold_quantity'),
+                DB::raw('COALESCE(SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.quantity ELSE 0 END), 0) as refunded_quantity'),
+                DB::raw('COALESCE(SUM(CASE 
+                    WHEN transactions.payment_status = "paid" THEN transaction_details.subtotal 
+                    WHEN transactions.payment_status = "refunded" THEN -transaction_details.subtotal 
+                    ELSE 0 
+                END), 0) as net_sales')
+            ])
+            ->join('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+            ->join('products', 'transaction_details.product_id', '=', 'products.id')
+            ->whereIn('transactions.payment_status', ['paid', 'refunded'])
+            ->groupBy(
+                $groupBy === 'month' 
+                    ? DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m-01")')
+                    : DB::raw('DATE(transactions.created_at)'),
+                'transaction_details.product_id',
+                'products.name',
+                'products.price'
+            );
+
+        // Apply the same filters as the main query
+        if ($groupBy === 'month') {
+            $productSalesQuery->whereYear('transactions.created_at', $year);
+        }
+
+        if ($request->has('user_id') && $request->user_id !== '') {
+            $productSalesQuery->where('transactions.user_id', $request->user_id);
+        }
+
+        if ($request->has('date_from') && $request->date_from !== '') {
+            $productSalesQuery->whereDate('transactions.created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $productSalesQuery->whereDate('transactions.created_at', '<=', $request->date_to);
+        }
+
+        // Get the product sales data
+        $productSales = $productSalesQuery->get()
+            ->groupBy('trans_date')
+            ->map(function ($products) {
+                return $products->map(function ($product) {
+                    return [
+                        'id' => $product->product_id,
+                        'name' => $product->product_name,
+                        'price' => (float) $product->price,
+                        'sold_quantity' => (int) $product->sold_quantity,
+                        'refunded_quantity' => (int) $product->refunded_quantity,
+                        'total_sales' => (float) $product->net_sales
+                    ];
+                })->sortByDesc('total_sales')->values();
+            });
+
+        // Then, group transactions by date and in your response mapping, add the products to each date:
         $groupedTransactions = $transactions->groupBy('transaction_date')
-            ->map(function ($dateTransactions, $date) use ($dates) {
+            ->map(function ($dateTransactions, $date) use ($dates, $productSales) {
                 $dateInfo = $dates->firstWhere('trans_date', $date);
                 //$totalTendered = $dateInfo->sum_cash_payment + $dateInfo->sum_bank_transfer_payment + $dateInfo->sum_ewallet_payment + $dateInfo->sum_qris_payment;
                 //$totalRefunded = $dateInfo->sum_cash_refunded + $dateInfo->sum_bank_transfer_refunded + $dateInfo->sum_ewallet_refunded + $dateInfo->sum_qris_refunded;
@@ -372,8 +434,8 @@ class TransactionController extends Controller
                         'ewallet' => (float) $dateInfo->sum_ewallet_refunded,
                         'qris' => (float) $dateInfo->sum_qris_refunded,
                     ],
-                    //'total_tendered' => (float) $totalTendered - (float) $totalRefunded,
                     'total_tax' => (float) $dateInfo->sum_tax,
+                    'products' => $productSales->get($date, collect()),
                     'transactions' => TransactionResource::collection($dateTransactions)
                 ];
             })
