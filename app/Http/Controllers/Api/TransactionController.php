@@ -236,15 +236,14 @@ class TransactionController extends Controller
                 $q->where('user_id', $request->user_id);
             })
             ->when($request->has('date_from') && $request->date_from !== '', function ($q) use ($request) {
-                $q->whereDate('created_at', '>=', $request->date_from);
+                $q->whereDate('transactions.created_at', '>=', $request->date_from);
             })
             ->when($request->has('date_to') && $request->date_to !== '', function ($q) use ($request) {
-                $q->whereDate('created_at', '<=', $request->date_to);
+                $q->whereDate('transactions.created_at', '<=', $request->date_to);
+            })
+            ->when($groupBy === 'month', function ($q) use ($year) {
+                $q->whereYear('transactions.created_at', $year);
             });
-
-        if ($groupBy === 'month') {
-            $baseQuery->whereYear('created_at', $year);
-        }
 
         // --- Transaction-level aggregates ---
         $transactionAggregatesQuery = (clone $baseQuery)
@@ -282,11 +281,25 @@ class TransactionController extends Controller
             )
             ->groupBy('trans_date');
 
+        // --- Products-level aggregates ---
+        $productAggregatesQuery = (clone $baseQuery)
+            ->join('transaction_details', 'transactions.id', '=', 'transaction_details.trans_id')
+            ->join('products', 'transaction_details.product_id', '=', 'products.id')
+            ->selectRaw(
+                ($groupBy === 'month' ? 'DATE_FORMAT(transactions.created_at, "%Y-%m-01")' : 'DATE(transactions.created_at)') . ' as trans_date,
+                products.id as product_id,
+                products.name as product_name,
+                products.price as product_price,
+                COALESCE(SUM(CASE WHEN transactions.payment_status = "paid" THEN transaction_details.quantity ELSE 0 END), 0) as sold_quantity,
+                COALESCE(SUM(CASE WHEN transactions.payment_status = "refunded" THEN transaction_details.quantity ELSE 0 END), 0) as refunded_quantity'
+            )
+            ->groupBy('trans_date', 'products.id', 'products.name', 'products.price');
+
         // --- Combine aggregates ---
         $transactionSql = $transactionAggregatesQuery->toSql();
         $detailSql = $detailAggregatesQuery->toSql();
         
-        // Create a new query builder
+        // Create a new query builder for dates with transaction and detail aggregates
         $datesQuery = DB::table(DB::raw("($transactionSql) as t_agg"))
             ->leftJoin(
                 DB::raw("($detailSql) as d_agg"), 
@@ -311,6 +324,12 @@ class TransactionController extends Controller
         foreach ($bindings as $binding) {
             $datesQuery->addBinding($binding);
         }
+        
+        // Get product data separately to avoid cartesian product
+        $productResults = $productAggregatesQuery->get();
+        
+        // Group product data by date
+        $productsByDate = $productResults->groupBy('trans_date');
 
         // First, get all the results
         $results = $datesQuery->get();
@@ -343,9 +362,35 @@ class TransactionController extends Controller
             ->orderBy('t_agg.trans_date', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
+        // Process results to include product data
+        $processedResults = collect($results->items())->map(function($item) use ($productsByDate) {
+            $item->products = $productsByDate->get($item->trans_date, collect())->map(function($product) {
+                return [
+                    'product_id' => $product->product_id,
+                    'name' => $product->product_name,
+                    'price' => (float)$product->product_price,
+                    'sold_quantity' => (int)$product->sold_quantity,
+                    'refunded_quantity' => (int)$product->refunded_quantity,
+                    'net_quantity' => (int)$product->sold_quantity - (int)$product->refunded_quantity,
+                    'total_sales' => (float)($product->product_price * ($product->sold_quantity - $product->refunded_quantity))
+                ];
+            })->values();
+            return $item;
+        });
+
+        // Calculate product-level totals
+        $productTotals = [
+            'total_products_sold' => $productResults->sum('sold_quantity'),
+            'total_products_refunded' => $productResults->sum('refunded_quantity'),
+            'unique_products' => $productResults->unique('product_id')->count(),
+            'total_sales_value' => $productResults->sum(function($product) {
+                return $product->product_price * ($product->sold_quantity - $product->refunded_quantity);
+            })
+        ];
+
         return response()->json([
-            'data' => $results->items(),
-            'totals' => $grandTotals,
+            'data' => $processedResults,
+            'totals' => (object) array_merge((array) $grandTotals, (array) $productTotals),
             'meta' => [
                 'total' => $results->total(),
                 'per_page' => $results->perPage(),
